@@ -14,11 +14,6 @@ from babel import numbers  # Importación explícita
 print(babel.__version__)
 print(numbers.format_currency(1234.56, 'USD', locale='en_US'))  # Prueba funcional
 
-import pygame
-import playsound
-import pyttsx3
-
-
 def main():
 
 
