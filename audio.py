@@ -5,6 +5,21 @@ import os
 import time
 
 
+def play_audio_async():
+    """Reproduce el audio en segundo plano sin bloquear la GUI"""
+    try:
+        pygame.init()
+        pygame.mixer.init()
+        ruta = os.path.join(os.getcwd(), "bancho.mp3")
+        pygame.mixer.music.load(ruta)
+        pygame.mixer.music.play()
+
+        # Esto se ejecutará en segundo plano sin bloquear
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)
+    except Exception as e:
+        print(f"Error al reproducir audio: {e}")
+
 def texto_a_voz(texto, velocidad=120, tono=50, volumen=0.8):
     try:
         # Inicializar pyttsx3

@@ -1,4 +1,5 @@
 import tkinter as tk
+import threading
 from tkinter import ttk, messagebox
 from datetime import datetime
 import sqlite3
@@ -52,6 +53,7 @@ def verificar_imports():
         'tkinter',
         'sqlite3',
         'datetime',
+        'threading',
         ('difflib', 'SequenceMatcher'),  # Ahora como tupla (módulo, submodulo)
         'tkcalendar',
         'os',

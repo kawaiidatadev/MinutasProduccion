@@ -1,41 +1,10 @@
-import time
-import tkinter as tk
-from tkinter import ttk, messagebox
-from datetime import datetime
-import sqlite3
-from difflib import SequenceMatcher
-from tkcalendar import Calendar
-import os
-import textwrap
-from tkinter import font
-from acuerdos.fromato_texto import formatear_texto
+from common import *
+from acuerdos.cerrar_2 import cerrar_acuerdo_seleccionado
 from acuerdos.children_window import center_child_window
-from acuerdos.limpiar_filtros import clear_filters
-from acuerdos.guardar_fecha_compromiso import save_commitment_date
 from acuerdos.editar_comentarios_date import edit_commitment_date
 from acuerdos.guardar_responsables import save_responsables
-from acuerdos.cerrar_2 import cerrar_acuerdo_seleccionado
-from audio import texto_a_voz
-
-import time
-import tkinter as tk
-from tkinter import ttk, messagebox
-from datetime import datetime
-import sqlite3
-from difflib import SequenceMatcher
-from tkcalendar import Calendar
-import os
-import textwrap
-from tkinter import font
-from acuerdos.fromato_texto import formatear_texto
-from acuerdos.children_window import center_child_window
 from acuerdos.limpiar_filtros import clear_filters
-from acuerdos.guardar_fecha_compromiso import save_commitment_date
-from acuerdos.editar_comentarios_date import edit_commitment_date
-from acuerdos.guardar_responsables import save_responsables
-from acuerdos.cerrar_2 import cerrar_acuerdo_seleccionado
-from audio import texto_a_voz
-
+from audio import texto_a_voz, play_audio_async
 
 def word_acuerdos(root, db_path):
     """Muestra una ventana con el historial de acuerdos y permite su edición"""
@@ -369,18 +338,11 @@ def word_acuerdos(root, db_path):
     # Configurar estilo para saltos de línea
     style.configure("Treeview", rowheight=30)
 
-    from playsound import playsound
-    import os
-    import pygame
-    ruta = os.path.join(os.getcwd(), "bancho.mp3")
 
-    pygame.init()
-    pygame.mixer.init()
-    pygame.mixer.music.load(ruta)
-    pygame.mixer.music.play()
 
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
+        # Reemplaza el bloque de pygame con esto:
+    audio_thread = threading.Thread(target=play_audio_async, daemon=True)
+    audio_thread.start()
 
 from acuerdos.center_window import center_window
 from acuerdos.carga_acuerdos import load_acuerdos
