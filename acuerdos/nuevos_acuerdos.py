@@ -173,44 +173,35 @@ def registrar_acuerdo(parent_window, db_path):
             messagebox.showwarning("Advertencia", "Debe ingresar un nombre")
             return
 
-        # Verificar si ya existe en la lista de disponibles
-        items = disponibles_listbox.get(0, "end")
-        if nuevo in items:
-            messagebox.showwarning("Advertencia", "Este responsable ya existe")
+        # Verificar si ya existe en la lista de disponibles o seleccionados (insensible a mayúsculas)
+        items_disponibles = [i.lower() for i in disponibles_listbox.get(0, "end")]
+        items_seleccionados = [i.lower() for i in seleccionados_listbox.get(0, "end")]
+
+        if nuevo.lower() in items_disponibles or nuevo.lower() in items_seleccionados:
+            messagebox.showwarning("Advertencia", "Este responsable ya existe en las listas")
             return
 
         try:
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
 
-            # Verificar si ya existe en la tabla usuarios
-            cursor.execute("SELECT nombre FROM usuarios WHERE nombre = ?", (nuevo,))
+            # Verificar si ya existe en la tabla usuarios (insensible a mayúsculas)
+            cursor.execute("SELECT nombre FROM usuarios WHERE LOWER(nombre) = LOWER(?)", (nuevo,))
             if not cursor.fetchone():
-                # Obtener fecha y hora actual en México (considerando zona horaria)
-                from datetime import datetime
-                import pytz
+                # Obtener fecha y hora actual en México
                 tz_mexico = pytz.timezone('America/Mexico_City')
                 fecha_actual = datetime.now(tz_mexico).strftime("%Y-%m-%d %H:%M:%S")
-
-                # Obtener usuario de Windows actual
-                import getpass
                 usuario_actual = getpass.getuser()
 
-                # Insertar nuevo usuario con todos los campos
                 cursor.execute(
                     """INSERT INTO usuarios 
                     (nombre, fecha_registro, usuario_registra, estatus) 
                     VALUES (?, ?, ?, 'Activo')""",
-                    (
-                        nuevo,
-                        fecha_actual,
-                        usuario_actual
-                    )
+                    (nuevo, fecha_actual, usuario_actual)
                 )
                 conn.commit()
 
             conn.close()
-
 
             # Agregar a la lista de disponibles y seleccionarlo
             disponibles_listbox.insert("end", nuevo)
@@ -260,8 +251,15 @@ def registrar_acuerdo(parent_window, db_path):
 
     def transfer_to_selected():
         selected = disponibles_listbox.curselection()
-        for i in selected[::-1]:
+        for i in selected[::-1]:  # Iterar en reversa para evitar problemas de índice
             item = disponibles_listbox.get(i)
+
+            # Verificar si ya está en seleccionados (comparación insensible a mayúsculas)
+            current_selected = [s.lower() for s in seleccionados_listbox.get(0, "end")]
+            if item.lower() in current_selected:
+                messagebox.showwarning("Duplicado", f"'{item}' ya está en la lista de seleccionados")
+                continue
+
             seleccionados_listbox.insert("end", item)
             disponibles_listbox.delete(i)
 
@@ -313,11 +311,13 @@ def registrar_acuerdo(parent_window, db_path):
         filtro = search_var.get().lower()
         disponibles_listbox.delete(0, "end")
 
+        # Obtener responsables ya seleccionados para evitar duplicados
+        seleccionados = [seleccionados_listbox.get(i) for i in range(seleccionados_listbox.size())]
+
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
         try:
-            # Nueva consulta usando split recursivo sin JSON
             cursor.execute("""
                 WITH RECURSIVE split_responsables AS (
                     SELECT 
@@ -333,52 +333,38 @@ def registrar_acuerdo(parent_window, db_path):
                         substr(remaining, instr(remaining || ',', ',') + 1)
                     FROM split_responsables
                     WHERE remaining != ''
-                ),
-                cleaned_names AS (
-                    SELECT trim(nombre) AS nombre
-                    FROM split_responsables
-                    WHERE nombre != ''
-                ),
-                frecuentes AS (
-                    SELECT nombre, COUNT(*) as frecuencia
-                    FROM cleaned_names
-                    GROUP BY nombre
-                    ORDER BY frecuencia DESC
-                ),
-                todos_usuarios AS (
-                    SELECT nombre, 0 as frecuencia
-                    FROM usuarios
                 )
-                SELECT nombre FROM (
-                    SELECT nombre, frecuencia FROM frecuentes
-                    UNION
-                    SELECT nombre, frecuencia FROM todos_usuarios
-                    WHERE nombre NOT IN (SELECT nombre FROM frecuentes)
-                )
-                ORDER BY frecuencia DESC, nombre ASC
+                SELECT DISTINCT trim(nombre) AS nombre
+                FROM split_responsables
+                WHERE nombre != ''
+                UNION
+                SELECT DISTINCT nombre 
+                FROM usuarios
+                WHERE nombre IS NOT NULL AND nombre != ''
+                ORDER BY nombre COLLATE NOCASE ASC
             """)
 
-            responsables = cursor.fetchall()
+            # Procesar resultados para eliminar duplicados y filtrar
+            unique_names = set()
+            for resp in cursor.fetchall():
+                nombre = resp[0].strip()
+                if nombre and nombre.lower() not in unique_names:
+                    unique_names.add(nombre.lower())
 
-            # Limpiar nombres y filtrar
-            unique_names = {resp[0].strip() for resp in responsables if resp[0].strip()}
-            sorted_names = sorted(unique_names, key=lambda x: (-sum(1 for r in responsables if r[0].strip() == x), x))
-
-            for nombre in sorted_names:
-                if filtro in nombre.lower():
-                    disponibles_listbox.insert("end", nombre)
+                    # Mostrar solo si coincide con el filtro y no está ya seleccionado
+                    if filtro in nombre.lower() and nombre not in seleccionados:
+                        disponibles_listbox.insert("end", nombre)
 
         except sqlite3.Error as e:
             print(f"Error en consulta SQL: {e}")
         finally:
             conn.close()
 
-        for resp in responsables:
-            if filtro in resp[0].lower():
-                disponibles_listbox.insert("end", resp[0])
+    # Configurar el trace
+    search_var.trace("w", lambda *args: filtrar_responsables())
 
-    search_var.trace("w", filtrar_responsables)
-    filtrar_responsables()  # Cargar inicialmente
+    # Llamada inicial para cargar datos
+    filtrar_responsables()
 
     # Botones inferiores
     button_frame = tk.Frame(main_frame, bg=bg_color)
@@ -404,6 +390,14 @@ def registrar_acuerdo(parent_window, db_path):
 
         if not seleccionados_listbox.size():
             messagebox.showwarning("Advertencia", "Debe seleccionar al menos un responsable")
+            return
+
+            # Validar responsables únicos (insensible a mayúsculas)
+        responsables = seleccionados_listbox.get(0, "end")
+        responsables_lower = [r.lower() for r in responsables]
+
+        if len(responsables) != len(set(responsables_lower)):
+            messagebox.showerror("Error", "Hay nombres duplicados en los responsables seleccionados")
             return
 
         try:
