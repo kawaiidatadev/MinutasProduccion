@@ -353,62 +353,59 @@ def show_main_menu(db_path):
     # Mostrar tabla de acuerdos activos
     mostrar_tabla_acuerdos(main_frame, db_path)
 
-    # Marco para el botón principal
-    button_frame = tk.Frame(main_frame, bg=bg_color)
-    button_frame.pack(expand=False, pady=1)  # Cambiado a expand=False
+    # Marco contenedor para ambos botones (centrado)
+    buttons_container = tk.Frame(main_frame, bg=bg_color)
+    buttons_container.pack(pady=20, fill='x')
 
-    # Configuración del botón principal
-    button_config = {
-        'width': 20,
+    # Configuración común para ambos botones
+    button_style = {
+        'font': ('Helvetica', 11, 'bold'),
         'height': 2,
-        'font': button_font,
-        'bg': button_color,
-        'fg': text_color,
-        'activebackground': button_hover,
-        'activeforeground': text_color,
-        'relief': 'flat',
-        'borderwidth': 0,
-        'highlightthickness': 0
+        'borderwidth': 3,
+        'highlightthickness': 0,
+        'cursor': 'hand2',
+        'activeforeground': text_color
     }
 
-    # Crear solo el botón de Acuerdos Interactivos
+    # Botón de Acuerdos Interactivos (mejorado)
     btn = tk.Button(
-        button_frame,
-        text="Acuerdos Interactivos",
+        buttons_container,
+        text="ACUERDOS INTERACTIVOS",
         command=button_action,
-        **button_config
+        bg=button_color,
+        fg=text_color,
+        activebackground=button_hover,
+        relief='raised',
+        width=22,
+        **button_style
     )
-    btn.pack(pady=20, ipadx=10, ipady=5)
+    btn.pack(side='left', expand=True, padx=(0, 15))
 
-    # Efecto hover
-    btn.bind("<Enter>", lambda e: btn.config(bg=button_hover))
-    btn.bind("<Leave>", lambda e: btn.config(bg=button_color))
-
-    # Marco para el botón de salir (parte inferior derecha)
-    exit_frame = tk.Frame(main_frame, bg=bg_color)
-    exit_frame.pack(fill="x", side="bottom", pady=10)
-
-    # Botón de salir
+    # Botón de Salir (mejorado)
     exit_button = tk.Button(
-        exit_frame,
-        text="Salir",
+        buttons_container,
+        text="SALIR DEL SISTEMA",
         command=on_close,
-        width=10,
-        height=1,
-        font=button_font,
         bg=exit_button_color,
         fg=text_color,
         activebackground=exit_button_hover,
-        activeforeground=text_color,
-        relief='flat',
-        borderwidth=0,
-        highlightthickness=0
+        relief='raised',
+        width=18,
+        **button_style
     )
-    exit_button.pack(side="right", padx=20)
+    exit_button.pack(side='right', expand=True, padx=(15, 0))
 
-    # Efecto hover para el botón de salir
-    exit_button.bind("<Enter>", lambda e: exit_button.config(bg=exit_button_hover))
-    exit_button.bind("<Leave>", lambda e: exit_button.config(bg=exit_button_color))
+    # Efectos hover mejorados para ambos botones
+    btn.bind("<Enter>", lambda e: btn.config(bg=button_hover, relief='sunken'))
+    btn.bind("<Leave>", lambda e: btn.config(bg=button_color, relief='raised'))
+    exit_button.bind("<Enter>", lambda e: exit_button.config(
+        bg=exit_button_hover,
+        relief='sunken'
+    ))
+    exit_button.bind("<Leave>", lambda e: exit_button.config(
+        bg=exit_button_color,
+        relief='raised'
+    ))
 
     # Iniciar reloj
     update_clock()
