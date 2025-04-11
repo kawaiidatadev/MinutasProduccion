@@ -43,3 +43,5 @@ import pygame
 import pygame
 import playsound
 import pyttsx3
+from PIL import Image, ImageTk
+import fpdf

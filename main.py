@@ -1,4 +1,3 @@
-import time
 from common import *
 from sql.db import db_create
 from Menu.Menu import show_main_menu  # ahora ejecutaremos la ventana Menu
