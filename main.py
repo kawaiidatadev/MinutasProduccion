@@ -1,4 +1,5 @@
 from common import *
+verificar_imports()
 from sql.db import db_create
 from Menu.Menu import show_main_menu  # ahora ejecutaremos la ventana Menu
 import locale
