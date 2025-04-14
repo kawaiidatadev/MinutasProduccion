@@ -46,6 +46,28 @@ import playsound
 import pyttsx3
 from PIL import Image, ImageTk
 import fpdf
+import threading
+import time
+import os
+import sys
+import locale
+import win32gui
+import win32con
+import sqlite3
+import time
+import threading
+import os
+import sys
+import winreg as reg
+from plyer import notification
+import pystray
+from PIL import Image
+import io
+import base64
+import win32event
+import win32api
+import win32con
+import ctypes
 
 
 def verificar_imports():

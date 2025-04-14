@@ -2,52 +2,129 @@ from PIL import Image, ImageTk
 from collections import Counter
 from tabla_principal import mostrar_tabla_acuerdos
 from common import *
+import sys
+from ctypes import windll, WinDLL
+from tkinter import font
+import ctypes
+from ctypes import wintypes
+from tkinter import font
+import logging
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class DPI_AWARENESS:
+    UNAWARE = 0
+    SYSTEM_AWARE = 1
+    PER_MONITOR_AWARE = 2
 
 
 def get_system_scaling():
-    """Detecta el factor de escalado del sistema (Windows, Linux o macOS)"""
-    if sys.platform == 'win32':
+    """Detecta el factor de escalado del sistema en Windows de manera robusta"""
+    scale_factor = 1.0  # Valor por defecto
+
+    try:
+        # Primero intentamos con la API moderna (Windows 8.1+)
+        shcore = ctypes.WinDLL('shcore', use_last_error=True)
+
+        # Definimos los tipos de función correctamente
+        shcore.GetScaleFactorForDevice.restype = wintypes.UINT
+        shcore.GetScaleFactorForDevice.argtypes = [wintypes.DWORD]
+
+        # Establecemos la conciencia DPI
+        if hasattr(shcore, 'SetProcessDpiAwareness'):
+            shcore.SetProcessDpiAwareness(DPI_AWARENESS.PER_MONITOR_AWARE)
+
+        # Obtenemos el factor de escala
+        scale_factor = shcore.GetScaleFactorForDevice(0) / 100.0  # 0 = DEVICE_PRIMARY
+        logger.info(f"Escalado detectado (shcore): {scale_factor}")
+
+    except (AttributeError, OSError, WindowsError) as e:
+        logger.warning(f"No se pudo usar shcore: {e}. Intentando métodos alternativos...")
         try:
-            from ctypes import windll
-            windll.shcore.SetProcessDpiAwareness(1)
-            scale_factor = windll.shcore.GetScaleFactorForDevice(0) / 100
-            return scale_factor
-        except:
-            return 1.0  # Fallback si no se puede detectar
-    elif sys.platform == 'darwin':  # macOS
-        # En macOS, el escalado suele ser 1.0 o 2.0 (Retina)
-        return 2.0 if root.tk.call('tk', 'windowingsystem') == 'aqua' else 1.0
-    else:  # Linux (requiere configuración adicional)
-        return 1.0  # Por defecto, asumimos 1.0 (puedes ajustar según necesidad)
+            # Fallback para versiones más antiguas (Windows Vista/7)
+            user32 = ctypes.WinDLL('user32', use_last_error=True)
+            if hasattr(user32, 'SetProcessDPIAware'):
+                user32.SetProcessDPIAware()
+
+            # Obtenemos la DPI del monitor
+            hdc = user32.GetDC(0)
+            if hdc:
+                LOGPIXELSX = 88
+                try:
+                    gdi32 = ctypes.WinDLL('gdi32', use_last_error=True)
+                    dpi = gdi32.GetDeviceCaps(hdc, LOGPIXELSX)
+                    scale_factor = dpi / 96.0
+                    logger.info(f"Escalado detectado (GetDeviceCaps): {scale_factor}")
+                finally:
+                    user32.ReleaseDC(0, hdc)
+
+        except Exception as e:
+            logger.error(f"Error al obtener DPI: {e}. Usando valor por defecto 1.0")
+
+    # Aseguramos límites razonables (0.5 - 3.0)
+    return max(0.5, min(3.0, scale_factor))
 
 
 def apply_scaling(root, scale_factor):
-    """Aplica el escalado a la ventana y fuentes de Tkinter"""
-    # Configura el escalado global de Tkinter
-    root.tk.call('tk', 'scaling', scale_factor * 1.5)  # Ajuste empírico para mejor visualización
+    """Aplica el escalado a la ventana y fuentes de Tkinter de manera más robusta"""
+    if not root or not hasattr(root, 'tk'):
+        logger.error("Objeto root de Tkinter no válido")
+        return {}
 
-    # Ajusta tamaños de fuentes según el escalado
-    fonts_to_adjust = [
-        ('title_font', 14),
-        ('button_font', 10),
-        ('clock_font', 10),
-        ('card_title_font', 11),
-        ('card_value_font', 24),
-        ('card_footer_font', 9)
-    ]
+    try:
+        # Ajuste de escalado de Tkinter con validación
+        try:
+            current_scaling = float(root.tk.call('tk', 'scaling'))
+            new_scaling = max(0.5, min(3.0, scale_factor * 1.33))
+            root.tk.call('tk', 'scaling', new_scaling)
+            logger.info(f"Escalado Tkinter ajustado de {current_scaling} a {new_scaling}")
+        except Exception as e:
+            logger.error(f"Error al ajustar tk scaling: {e}")
 
-    adjusted_fonts = {}
-    for name, base_size in fonts_to_adjust:
-        adjusted_size = int(base_size / scale_factor) if scale_factor > 1 else base_size
-        adjusted_fonts[name] = font.Font(
-            family="Helvetica",
-            size=adjusted_size,
-            weight="bold" if "title" in name or "value" in name else "normal"
-        )
+        # Fuentes base con tamaños mínimos/máximos
+        font_configs = {
+            'title_font': {'size': 14, 'min': 10, 'max': 20},
+            'button_font': {'size': 10, 'min': 8, 'max': 16},
+            'clock_font': {'size': 10, 'min': 8, 'max': 16},
+            'card_title_font': {'size': 11, 'min': 9, 'max': 18},
+            'card_value_font': {'size': 24, 'min': 16, 'max': 36},
+            'card_footer_font': {'size': 9, 'min': 7, 'max': 14}
+        }
 
-    return adjusted_fonts
+        adjusted_fonts = {}
+        for name, config in font_configs.items():
+            try:
+                # Cálculo no lineal con límites
+                base_size = config['size']
+                adjusted_size = int(base_size / (scale_factor ** 0.4))
+                clamped_size = max(config['min'], min(config['max'], adjusted_size))
 
+                weight = "bold" if "title" in name or "value" in name else "normal"
 
+                adjusted_fonts[name] = font.Font(
+                    family="Segoe UI",
+                    size=clamped_size,
+                    weight=weight
+                )
+                logger.debug(f"Fuente {name} ajustada a {clamped_size}px")
+
+            except Exception as e:
+                logger.error(f"Error al crear fuente {name}: {e}")
+                # Fuente de fallback
+                adjusted_fonts[name] = font.Font(
+                    family="Segoe UI",
+                    size=config['size'],
+                    weight="bold" if "title" in name or "value" in name else "normal"
+                )
+
+        return adjusted_fonts
+
+    except Exception as e:
+        logger.critical(f"Error crítico en apply_scaling: {e}")
+        return {}
 
 def show_main_menu(db_path):
     """Función principal con autoajuste para HiDPI"""  # <-- 4 espacios
