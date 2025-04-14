@@ -31,6 +31,9 @@ def word_acuerdos(root, db_path):
     def on_closing():
         window.destroy()  # Cerrar la ventana secundaria
         root.deiconify()  # Mostrar la ventana principal nuevamente
+        # Maximizar la ventana según el sistema operativo
+        if sys.platform == 'win32':
+            root.state('zoomed')  # Para Windows
 
     # Configurar el protocolo de cierre
     window.protocol("WM_DELETE_WINDOW", on_closing)
