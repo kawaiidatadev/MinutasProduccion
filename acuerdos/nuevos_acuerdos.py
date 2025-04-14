@@ -380,9 +380,7 @@ def registrar_acuerdo(parent_window, db_path):
         if no_aplica_var.get():
             comentarios = "Sin fecha compromiso"
         else:
-            comentarios = ""  # O puedes usar None si prefieres
-
-        responsables = ", ".join(seleccionados_listbox.get(0, "end"))
+            comentarios = ""
 
         if not acuerdo:
             messagebox.showwarning("Advertencia", "Debe ingresar el texto del acuerdo")
@@ -392,13 +390,17 @@ def registrar_acuerdo(parent_window, db_path):
             messagebox.showwarning("Advertencia", "Debe seleccionar al menos un responsable")
             return
 
-            # Validar responsables únicos (insensible a mayúsculas)
-        responsables = seleccionados_listbox.get(0, "end")
-        responsables_lower = [r.lower() for r in responsables]
+        # Obtener lista de responsables seleccionados
+        selected_responsables = list(seleccionados_listbox.get(0, "end"))
 
-        if len(responsables) != len(set(responsables_lower)):
+        # Verificar duplicados usando lowercase
+        responsables_lower = [r.lower() for r in selected_responsables]
+        if len(responsables_lower) != len(set(responsables_lower)):
             messagebox.showerror("Error", "Hay nombres duplicados en los responsables seleccionados")
             return
+
+        # Unir responsables en una sola cadena para insertar en la base de datos
+        responsables_str = ", ".join(selected_responsables)
 
         try:
             conn = sqlite3.connect(db_path)
@@ -418,7 +420,7 @@ def registrar_acuerdo(parent_window, db_path):
                 (
                     id_acuerdo,
                     acuerdo,
-                    responsables,
+                    responsables_str,
                     fecha_calendario,  # Siempre la fecha del calendario
                     fecha_actual,
                     getpass.getuser(),
