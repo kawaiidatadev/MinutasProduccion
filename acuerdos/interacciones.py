@@ -13,7 +13,19 @@ def word_acuerdos(root, db_path):
     window.title("Gestión de Acuerdos")
     window.geometry("1300x700")  # Ventana más grande
     window.configure(bg='#f0f0f0')
+    print("Ocultando root 1")
     root.withdraw()
+
+    def maximize_window():
+        if sys.platform == 'win32':
+            window.state('zoomed')  # Para Windows
+
+
+    # Maximizar inmediatamente después de crear la ventana
+    window.after(100, maximize_window)
+
+    # Configurar para que se maximice cada vez que gana el foco
+    window.bind('<FocusIn>', lambda e: maximize_window())
 
     # Función que se ejecuta al cerrar la ventana
     def on_closing():
@@ -759,4 +771,3 @@ def mover_seleccion(origen, destino):
     for v in valores:
         if v not in destino.get(0, "end"):
             destino.insert("end", v)
-

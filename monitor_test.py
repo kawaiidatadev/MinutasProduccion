@@ -15,7 +15,7 @@ class AcuerdoMonitor:
         self.mutex = win32event.CreateMutex(None, False, "Global\\AcuerdoMonitorMutex")
         if win32api.GetLastError() == 183:
             print("Ya hay una instancia en ejecución. Saliendo...")
-            sys.exit(0)
+            #sys.exit(0)
 
     def _setup_autostart(self):
         """Agrega el programa al inicio de Windows"""

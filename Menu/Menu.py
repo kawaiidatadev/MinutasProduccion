@@ -153,6 +153,10 @@ def show_main_menu(db_path):
     y = (screen_height // 2) - (height // 2)
     root.geometry(f"{width}x{height}+{x}+{y}")
 
+    # Maximizar la ventana según el sistema operativo
+    if sys.platform == 'win32':
+        root.state('zoomed')  # Para Windows
+
     # 4. Ajustar fuentes
     fonts = apply_scaling(root, scale_factor)
 

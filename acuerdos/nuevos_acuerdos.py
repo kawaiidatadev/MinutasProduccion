@@ -16,6 +16,7 @@ def registrar_acuerdo(parent_window, db_path):
 
     # Configurar ventana principal
     parent_window.withdraw()
+
     reg_window = tk.Toplevel()
     reg_window.title("Registrar Nuevo Acuerdo")
 
@@ -32,6 +33,12 @@ def registrar_acuerdo(parent_window, db_path):
 
     # Centrar la ventana
     center_window(reg_window)
+    # Hacer la ventana modal (evitar interactuar con otras)
+    reg_window.grab_set()
+
+    # Maximizar la ventana según el sistema operativo
+    if sys.platform == 'win32':
+        reg_window.state('zoomed')  # Para Windows
 
     # Estilos
     bg_color = "#f0f0f0"
@@ -418,6 +425,7 @@ def registrar_acuerdo(parent_window, db_path):
         try:
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
+
 
             # Generar ID de acuerdo único
             id_acuerdo = f"AC-{datetime.now().strftime('%Y%m%d%H%M%S')}"
