@@ -3,20 +3,81 @@ from collections import Counter
 from tabla_principal import mostrar_tabla_acuerdos
 from common import *
 
-def show_main_menu(db_path):
-    """Función que muestra el menú principal con tarjetas de métricas"""
-    root = tk.Tk()
-    # Configuración básica de la ventana
-    width, height = 800, 825  # Aumentamos el tamaño para las tarjetas
-    root.title("Sistema de Acuerdos - Menú Principal")
-    root.minsize(1000, 600)
 
-    # Centrar la ventana en la pantalla
+def get_system_scaling():
+    """Detecta el factor de escalado del sistema (Windows, Linux o macOS)"""
+    if sys.platform == 'win32':
+        try:
+            from ctypes import windll
+            windll.shcore.SetProcessDpiAwareness(1)
+            scale_factor = windll.shcore.GetScaleFactorForDevice(0) / 100
+            return scale_factor
+        except:
+            return 1.0  # Fallback si no se puede detectar
+    elif sys.platform == 'darwin':  # macOS
+        # En macOS, el escalado suele ser 1.0 o 2.0 (Retina)
+        return 2.0 if root.tk.call('tk', 'windowingsystem') == 'aqua' else 1.0
+    else:  # Linux (requiere configuración adicional)
+        return 1.0  # Por defecto, asumimos 1.0 (puedes ajustar según necesidad)
+
+
+def apply_scaling(root, scale_factor):
+    """Aplica el escalado a la ventana y fuentes de Tkinter"""
+    # Configura el escalado global de Tkinter
+    root.tk.call('tk', 'scaling', scale_factor * 1.5)  # Ajuste empírico para mejor visualización
+
+    # Ajusta tamaños de fuentes según el escalado
+    fonts_to_adjust = [
+        ('title_font', 14),
+        ('button_font', 10),
+        ('clock_font', 10),
+        ('card_title_font', 11),
+        ('card_value_font', 24),
+        ('card_footer_font', 9)
+    ]
+
+    adjusted_fonts = {}
+    for name, base_size in fonts_to_adjust:
+        adjusted_size = int(base_size / scale_factor) if scale_factor > 1 else base_size
+        adjusted_fonts[name] = font.Font(
+            family="Helvetica",
+            size=adjusted_size,
+            weight="bold" if "title" in name or "value" in name else "normal"
+        )
+
+    return adjusted_fonts
+
+
+
+def show_main_menu(db_path):
+    """Función principal con autoajuste para HiDPI"""  # <-- 4 espacios
+    root = tk.Tk()  # <-- Ahora también con 4 espacios
+
+    # 1. Detectar escalado del sistema
+    scale_factor = get_system_scaling()
+    print(f"Factor de escalado detectado: {scale_factor}")
+
+    # 2. Aplicar configuración HiDPI
+    if sys.platform == 'win32':
+        root.tk.call('tk', 'scaling', scale_factor * 1.5)
+
+    # 3. Configuración de ventana con escalado
+    base_width, base_height = 800, 825
+    width = int(base_width / scale_factor)
+    height = int(base_height / scale_factor)
+
+    root.title("Sistema de Acuerdos - Menú Principal")
+    root.minsize(int(1000 / scale_factor), int(600 / scale_factor))
+
+    # Centrado con escalado
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     x = (screen_width // 2) - (width // 2)
     y = (screen_height // 2) - (height // 2)
     root.geometry(f"{width}x{height}+{x}+{y}")
+
+    # 4. Ajustar fuentes
+    fonts = apply_scaling(root, scale_factor)
 
     # Paleta de colores mejorada
     bg_color = "#f5f7fa"
