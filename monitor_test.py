@@ -12,7 +12,8 @@ from PIL import Image
 import pystray
 
 # Configuración de paths
-DB_PATH = r"\\mercury\Mtto_Prod\00_Departamento_Mantenimiento\Minutas\minutas.db"
+from rutas import DB_PATH
+DB_PATH = DB_PATH
 APP_NAME = "AcuerdoMonitor"
 MUTEX_NAME = f"Global\\{APP_NAME}_Mutex"
 
@@ -241,11 +242,11 @@ class AcuerdoMonitor:
     def _map_network_drive_if_needed(self):
         """Mapea unidad de red con credenciales persistentes"""
         try:
-            if not os.path.exists(r"\\mercury\Mtto_Prod"):
+            if not os.path.exists(r"\\mercury\Producción"):
                 win32api.WNetAddConnection2(
                     win32con.RESOURCETYPE_DISK,
                     None,
-                    r"\\mercury\Mtto_Prod",
+                    r"\\mercury\Producción",
                     None,
                     None,
                     win32con.CONNECT_UPDATE_PROFILE

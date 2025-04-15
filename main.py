@@ -1,11 +1,10 @@
 from common import *
-from sql.db import db_create, buscar_minutas_db
+from sql.db import db_create
 from Menu.Menu import show_main_menu
 from tkinter import Tk, Toplevel
 import sys
 from monitor_exe import ejecutar_monitor
 from common import *
-from sql.db import db_create, buscar_minutas_db
 from Menu.Menu import show_main_menu
 import locale
 
@@ -23,7 +22,7 @@ def main():
 
     # Crear/verificar la base de datos
     db_create()
-    db_path = buscar_minutas_db()
+    db_path = db_create()
 
     # Mostrar el menú principal
     show_main_menu(db_path)

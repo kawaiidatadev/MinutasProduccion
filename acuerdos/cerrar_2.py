@@ -15,7 +15,8 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
     print("cerrar 2.py")
     """Cierra un acuerdo con comentarios y evidencias, y actualiza el Treeview"""
     # Ruta base para guardar las evidencias
-    BASE_EVIDENCIAS = r"\\mercury\Mtto_Prod\00_Departamento_Mantenimiento\Minutas\evidencias_acuerdos"
+    from rutas import BASE_EVIDENCIAS
+    BASE_EVIDENCIAS = BASE_EVIDENCIAS
 
     # Crear ventana para capturar detalles del cierre
     details_window = tk.Toplevel()
@@ -262,7 +263,9 @@ def generate_pdf_report(id_acuerdo, acuerdo, responsables, fecha_registro,
 
         def header(self):
             # Logo en el lado izquierdo
-            self.image(r"\\mercury\Mtto_Prod\00_Departamento_Mantenimiento\Minutas\Minuta 1.2\img.jpg", 10, 8, 25)
+            from rutas import ruta_image
+            ruta_image = ruta_image
+            self.image(ruta_image, 10, 8, 25)
 
 
             # Título del documento en el lado derecho (ajustado para mejor posición)

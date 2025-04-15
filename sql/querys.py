@@ -1,7 +1,8 @@
 import sqlite3
 
 # Conectar a la base de datos
-conn = sqlite3.connect(r'\\mercury\Mtto_Prod\00_Departamento_Mantenimiento\Minutas\minutas.db')
+from rutas import DB_PATH
+conn = sqlite3.connect(DB_PATH)
 cursor = conn.cursor()
 
 # Obtener los queries de creación de tablas

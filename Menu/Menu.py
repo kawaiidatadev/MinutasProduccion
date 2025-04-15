@@ -357,7 +357,8 @@ def show_main_menu(db_path):
     # Intentar cargar el logo
     logo_img = None
     try:
-        logo_path = r"\\mercury\Mtto_Prod\00_Departamento_Mantenimiento\Minutas\logo.png"
+        from rutas import logo_path
+        logo_path = logo_path
         image = Image.open(logo_path)
         image = image.resize((40, 40), Image.LANCZOS)
         logo_img = ImageTk.PhotoImage(image)
