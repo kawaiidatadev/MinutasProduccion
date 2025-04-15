@@ -68,6 +68,27 @@ import win32event
 import win32api
 import win32con
 import ctypes
+import os
+import sys
+import io
+import time
+import sqlite3
+import threading
+import win32event
+import win32api
+import win32con
+from win32com.shell import shell, shellcon
+import win32service
+import win32serviceutil
+import winerror
+from PIL import Image
+import pystray
+from plyer import notification
+import ctypes
+
+
+
+
 
 
 def verificar_imports():

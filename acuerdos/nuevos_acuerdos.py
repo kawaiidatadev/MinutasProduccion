@@ -1,7 +1,7 @@
 from common import *
 from acuerdos.center_window import center_window
 from Menu.Menu import get_system_scaling
-
+from test_limitaciones import bloquear_ventana_robusta
 
 def nuevo_acuerdo(parent_window, db_path):
     print("Nuevo Acuerdo")  # Aquí iría la lógica para crear nuevo acuerdo
@@ -39,6 +39,8 @@ def registrar_acuerdo(parent_window, db_path):
     # Maximizar la ventana según el sistema operativo
     if sys.platform == 'win32':
         reg_window.state('zoomed')  # Para Windows
+
+    bloquear_ventana_robusta(reg_window)
 
     # Estilos
     bg_color = "#f0f0f0"

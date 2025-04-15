@@ -126,6 +126,9 @@ def apply_scaling(root, scale_factor):
         logger.critical(f"Error crítico en apply_scaling: {e}")
         return {}
 
+from test_limitaciones import bloquear_ventana_robusta
+
+
 def show_main_menu(db_path):
     """Función principal con autoajuste para HiDPI"""  # <-- 4 espacios
     root = tk.Tk()  # <-- Ahora también con 4 espacios
@@ -155,7 +158,9 @@ def show_main_menu(db_path):
 
     # Maximizar la ventana según el sistema operativo
     if sys.platform == 'win32':
+        print("zomed menu.py")
         root.state('zoomed')  # Para Windows
+    bloquear_ventana_robusta(root)
 
     # 4. Ajustar fuentes
     fonts = apply_scaling(root, scale_factor)

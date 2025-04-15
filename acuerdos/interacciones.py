@@ -5,16 +5,17 @@ from acuerdos.editar_comentarios_date import edit_commitment_date
 from acuerdos.guardar_responsables import save_responsables
 from acuerdos.limpiar_filtros import clear_filters
 from audio import texto_a_voz, play_audio_async
-
+from test_limitaciones import bloquear_ventana_robusta
 def word_acuerdos(root, db_path):
     """Muestra una ventana con el historial de acuerdos y permite su edición"""
     # Crear ventana principal
     window = tk.Toplevel(root)
     window.title("Gestión de Acuerdos")
-    window.geometry("1300x700")  # Ventana más grande
+    window.geometry("1400x700")  # Ventana más grande
     window.configure(bg='#f0f0f0')
     print("Ocultando root 1")
     root.withdraw()
+    bloquear_ventana_robusta(window)
 
     def maximize_window():
         if sys.platform == 'win32':
@@ -33,6 +34,7 @@ def word_acuerdos(root, db_path):
         root.deiconify()  # Mostrar la ventana principal nuevamente
         # Maximizar la ventana según el sistema operativo
         if sys.platform == 'win32':
+            print("zomed inter.py")
             root.state('zoomed')  # Para Windows
 
     # Configurar el protocolo de cierre
