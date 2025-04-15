@@ -7,11 +7,13 @@ import getpass
 def bloquear_ventana_robusta(ventana):
     """
     Bloquea una ventana Tkinter para que:
-    - Muestre bordes y botón de cerrar
-    - Permita minimizar
-    - No se pueda maximizar ni redimensionar
-    - No se pueda cambiar de pantalla (posición fija)
-    - Permita ver la barra de tareas
+    - Abra en el tamaño más grande posible (debe establecerse como maximizada antes de llamar a esta función).
+    - Muestre bordes y botón de cerrar.
+    - Permita minimizar.
+    - No permita maximizar.
+    - No permita redimensionar.
+    - Permita cambiar de ventana.
+    - Muestre la barra de tareas.
 
     Args:
         ventana (tk.Tk o tk.Toplevel): Ventana que se desea bloquear
@@ -23,48 +25,39 @@ def bloquear_ventana_robusta(ventana):
     # Evitar redimensionamiento
     ventana.resizable(False, False)
 
-    # Asegurarse de que la ventana no esté maximizada
-    ventana.state('normal')
-
     # Desactivar el atributo topmost si estaba activo
     ventana.attributes('-topmost', False)
 
-    # Obtener posición y tamaño inicial (una vez cargada)
+    # Obtener tamaño inicial después de cargar
     ventana.update_idletasks()
-    x, y = ventana.winfo_x(), ventana.winfo_y()
     w, h = ventana.winfo_width(), ventana.winfo_height()
-    ventana._posicion_inicial = (x, y)
     ventana._dimensiones_iniciales = (w, h)
 
-    # Fijar geometría
-    ventana.geometry(f"{w}x{h}+{x}+{y}")
+    # Configurar geometría inicial (solo tamaño)
+    ventana.geometry(f"{w}x{h}")
 
     if platform.system() == "Windows":
         _bloquear_ventana_windows(ventana)
 
-    # Reforzar geometría en caso de movimientos
+    # Reforzar tamaño en caso de cambios
     ventana.bind("<Configure>", lambda e: _corregir_geometria(ventana))
 
 
 def _bloquear_ventana_windows(ventana):
-    """Bloqueo específico para Windows: permite cerrar con 'X' y minimizar"""
+    """Bloqueo específico para Windows: remover botón de maximizar y borde de redimensionar"""
     try:
         hwnd = ctypes.windll.user32.GetParent(ventana.winfo_id())
 
         GWL_STYLE = -16
-        WS_MAXIMIZEBOX = 0x00010000  # Maximizar
-        WS_THICKFRAME = 0x00040000  # Redimensionar con bordes
+        WS_MAXIMIZEBOX = 0x00010000  # Botón de maximizar
+        WS_THICKFRAME = 0x00040000   # Borde de redimensionar
 
-        # Obtener estilo actual y desactivar lo no deseado
+        # Obtener y modificar estilos
         style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_STYLE)
         style &= ~(WS_MAXIMIZEBOX | WS_THICKFRAME)
         ctypes.windll.user32.SetWindowLongW(hwnd, GWL_STYLE, style)
 
-        # Asegurarse de que la ventana no esté maximizada
-        SW_SHOWNORMAL = 1
-        ctypes.windll.user32.ShowWindow(hwnd, SW_SHOWNORMAL)
-
-        # Refrescar ventana para aplicar estilo
+        # Forzar actualización de la ventana
         ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0,
                                       0x0002 | 0x0001 | 0x0020)
     except Exception as e:
@@ -72,11 +65,11 @@ def _bloquear_ventana_windows(ventana):
 
 
 def _corregir_geometria(ventana):
-    """Evita que se cambie la posición de la ventana"""
-    # Solo corregir si no está minimizada
-    if ventana.state() != 'iconic':
-        # Asegurarse de que la ventana no esté maximizada
-        if ventana.state() == 'zoomed':
-            ventana.state('normal')
-        ventana.geometry(f"{ventana._dimensiones_iniciales[0]}x{ventana._dimensiones_iniciales[1]}+"
-                     f"{ventana._posicion_inicial[0]}+{ventana._posicion_inicial[1]}")
+    """Mantiene el tamaño inicial de la ventana"""
+    if ventana.state() != 'iconic':  # Si no está minimizada
+        # Corregir solo si el tamaño ha cambiado
+        ancho_actual = ventana.winfo_width()
+        alto_actual = ventana.winfo_height()
+        if (ancho_actual != ventana._dimensiones_iniciales[0] or
+            alto_actual != ventana._dimensiones_iniciales[1]):
+            ventana.geometry(f"{ventana._dimensiones_iniciales[0]}x{ventana._dimensiones_iniciales[1]}")
