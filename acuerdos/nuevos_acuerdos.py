@@ -41,6 +41,9 @@ def registrar_acuerdo(parent_window, db_path):
         reg_window.state('zoomed')  # Para Windows
 
     bloquear_ventana_robusta(reg_window)
+    from acuerdos.ventana_names import move_to_largest_monitor
+    move_to_largest_monitor(reg_window)
+
 
     # Estilos
     bg_color = "#f0f0f0"

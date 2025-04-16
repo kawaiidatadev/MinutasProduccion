@@ -19,7 +19,7 @@ def bloquear_ventana_robusta(ventana):
         ventana (tk.Tk o tk.Toplevel): Ventana que se desea bloquear
     """
     # Verificar si el usuario es "jhuizar"
-    if getpass.getuser().lower() != "lmacias":
+    if getpass.getuser().lower() != "XXXX":
         return  # No hacer nada si el usuario no es "jhuizar"
 
     # Evitar redimensionamiento

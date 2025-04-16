@@ -161,6 +161,8 @@ def show_main_menu(db_path):
         print("zomed menu.py")
         root.state('zoomed')  # Para Windows
     bloquear_ventana_robusta(root)
+    from acuerdos.ventana_names import move_to_largest_monitor
+    move_to_largest_monitor(root)
 
     # 4. Ajustar fuentes
     fonts = apply_scaling(root, scale_factor)

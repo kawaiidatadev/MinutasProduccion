@@ -40,6 +40,9 @@ def word_acuerdos(root, db_path):
     # Configurar el protocolo de cierre
     window.protocol("WM_DELETE_WINDOW", on_closing)
 
+    from acuerdos.ventana_names import move_to_largest_monitor
+    move_to_largest_monitor(window)
+
     # Definir colores para resaltar cambios
     color_added = '#e6ffe6'  # Verde claro para adiciones
     color_removed = '#ffe6e6'  # Rojo claro para eliminaciones
