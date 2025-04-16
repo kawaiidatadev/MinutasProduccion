@@ -563,6 +563,9 @@ def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_p
     resp_window.geometry("700x500")  # <<< Ajusta el ancho y alto aquí
     resp_window.transient(acuerdos_tree.winfo_toplevel())
     resp_window.grab_set()
+    from acuerdos.ventana_names import move_to_largest_monitor
+    move_to_largest_monitor(resp_window)
+    print("simon we")
 
 
 
@@ -624,6 +627,7 @@ def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_p
         try:
             if widget.curselection():
                 context_menu.post(event.x_root, event.y_root)
+                print("eres tu stark?")
         except:
             pass
 

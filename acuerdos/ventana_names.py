@@ -149,7 +149,7 @@ class WindowManager:
     def _update_main_position(self, event):
         """Actualiza la posición de la ventana principal cuando se mueve"""
         if event.widget.title() == "Gestión de Acuerdos":
-            self.main_window_position = (event.x, event.y)22
+            self.main_window_position = (event.x, event.y)
             self.main_window_size = (event.width, event.height)
 
     def _check_user_move(self, window):
