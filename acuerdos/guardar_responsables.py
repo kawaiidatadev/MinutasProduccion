@@ -8,13 +8,25 @@ def save_responsables(item, new_responsables, edit_window, acuerdos_tree, histor
     old_responsables = acuerdos_tree.item(item, "values")[2]
     old_responsables_list = [r.strip() for r in old_responsables.split(",")] if old_responsables else []
 
-    # Procesar nuevos responsables (eliminar espacios, vacíos y duplicados)
+    # Procesar nuevos responsables (eliminar espacios, vacíos, duplicados y saltos de línea)
     processed_responsables = []
     seen = set()
+    has_commas = False  # Bandera para detectar nombres con comas
 
     for r in new_responsables:
-        cleaned = r.strip()
-        if cleaned and cleaned not in seen:
+        # Eliminar saltos de línea y espacios extra
+        cleaned = r.replace("\n", " ").replace("\r", " ").strip()
+
+        # Verificar si el nombre contiene comas después de limpiar
+        if "," in cleaned:
+            has_commas = True
+            # Dividir por comas y procesar cada parte
+            split_names = [name.strip() for name in cleaned.split(",") if name.strip()]
+            for name in split_names:
+                if name and name not in seen:
+                    seen.add(name)
+                    processed_responsables.append(name)
+        elif cleaned and cleaned not in seen:
             seen.add(cleaned)
             processed_responsables.append(cleaned)
 
@@ -31,6 +43,9 @@ def save_responsables(item, new_responsables, edit_window, acuerdos_tree, histor
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
+        # Determinar el estatus basado en si hubo comas en los nombres
+        estatus = "Eliminado" if has_commas else "Editado"
+
         # 1. Registrar en historial antes de actualizar
         cursor.execute(
             """INSERT INTO historial_acuerdos 
@@ -42,8 +57,8 @@ def save_responsables(item, new_responsables, edit_window, acuerdos_tree, histor
 
         # 2. Actualizar acuerdo
         cursor.execute(
-            "UPDATE acuerdos SET responsables = ?, fecha_estatus = datetime('now'), estatus = 'Editado' WHERE id_acuerdo = ?",
-            (new_responsables_str, id_acuerdo)
+            "UPDATE acuerdos SET responsables = ?, fecha_estatus = datetime('now'), estatus = ? WHERE id_acuerdo = ?",
+            (new_responsables_str, estatus, id_acuerdo)
         )
 
         # 3. Registrar nuevos usuarios que no existan
@@ -73,7 +88,7 @@ def save_responsables(item, new_responsables, edit_window, acuerdos_tree, histor
         if acuerdos_tree.focus() == item:
             load_historial(None, acuerdos_tree, historial_tree, historial_label, db_path)
 
-        messagebox.showinfo("Éxito", "Responsables actualizados correctamente.")
+        messagebox.showinfo("Éxito", f"Responsables actualizados correctamente. Estatus: {estatus}")
         edit_window.destroy()
 
     except sqlite3.Error as e:
