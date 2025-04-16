@@ -5,17 +5,21 @@ from acuerdos.editar_comentarios_date import edit_commitment_date
 from acuerdos.guardar_responsables import save_responsables
 from acuerdos.limpiar_filtros import clear_filters
 from audio import texto_a_voz, play_audio_async
-from test_limitaciones import bloquear_ventana_robusta
+
 def word_acuerdos(root, db_path):
     """Muestra una ventana con el historial de acuerdos y permite su edición"""
     # Crear ventana principal
     window = tk.Toplevel(root)
+    #bloquear_ventana_robusta(root)
+    from acuerdos.ventana_names import move_to_largest_monitor
+    move_to_largest_monitor(window)
+
+
     window.title("Gestión de Acuerdos")
     window.geometry("1400x700")  # Ventana más grande
     window.configure(bg='#f0f0f0')
-    print("Ocultando root 1")
     root.withdraw()
-    bloquear_ventana_robusta(window)
+    #bloquear_ventana_robusta(window)
 
     def maximize_window():
         if sys.platform == 'win32':
@@ -40,8 +44,6 @@ def word_acuerdos(root, db_path):
     # Configurar el protocolo de cierre
     window.protocol("WM_DELETE_WINDOW", on_closing)
 
-    from acuerdos.ventana_names import move_to_largest_monitor
-    move_to_largest_monitor(window)
 
     # Definir colores para resaltar cambios
     color_added = '#e6ffe6'  # Verde claro para adiciones
@@ -222,6 +224,7 @@ def word_acuerdos(root, db_path):
     window.bind('<Control-e>', ejecutar_excel)
     window.bind('<Control-E>', ejecutar_excel)
 
+
     # Función para habilitar/deshabilitar el botón de play según la selección
     def toggle_play_button(event=None):
         selected_item = acuerdos_tree.focus()
@@ -357,6 +360,8 @@ def word_acuerdos(root, db_path):
 
     # Configurar estilo para saltos de línea
     style.configure("Treeview", rowheight=30)
+
+
 
 
 

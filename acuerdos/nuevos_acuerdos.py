@@ -1,7 +1,7 @@
 from common import *
 from acuerdos.center_window import center_window
 from Menu.Menu import get_system_scaling
-from test_limitaciones import bloquear_ventana_robusta
+
 
 def nuevo_acuerdo(parent_window, db_path):
     print("Nuevo Acuerdo")  # Aquí iría la lógica para crear nuevo acuerdo
@@ -14,10 +14,12 @@ def registrar_acuerdo(parent_window, db_path):
     listbox_width = 30
     parent_window.withdraw()
 
-    # Configurar ventana principal
-    parent_window.withdraw()
-
     reg_window = tk.Toplevel()
+
+    # bloquear_ventana_robusta(root)
+    from acuerdos.ventana_names import move_to_largest_monitor
+    move_to_largest_monitor(reg_window)
+
     reg_window.title("Registrar Nuevo Acuerdo")
 
     # Configurar escalado de Tkinter
@@ -34,13 +36,13 @@ def registrar_acuerdo(parent_window, db_path):
     # Centrar la ventana
     center_window(reg_window)
     # Hacer la ventana modal (evitar interactuar con otras)
-    reg_window.grab_set()
+    #reg_window.grab_set()
 
     # Maximizar la ventana según el sistema operativo
     if sys.platform == 'win32':
         reg_window.state('zoomed')  # Para Windows
 
-    bloquear_ventana_robusta(reg_window)
+    #bloquear_ventana_robusta(reg_window)
     from acuerdos.ventana_names import move_to_largest_monitor
     move_to_largest_monitor(reg_window)
 
