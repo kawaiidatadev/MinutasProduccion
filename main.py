@@ -19,9 +19,6 @@ def main():
     # Crear/verificar la base de datos
     db_create()
     db_path = db_create()
-    from tracker import start_tracker  # Importar desde el nuevo módulo
-    # Iniciar tracker
-    tracker = start_tracker()
 
     # Mostrar el menú principal
     show_main_menu(db_path)

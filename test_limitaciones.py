@@ -10,7 +10,7 @@ def bloquear_ventana_robusta(ventana):
     - Abra en el tamaño más grande posible (debe establecerse como maximizada antes de llamar a esta función).
     - Muestre bordes y botón de cerrar.
     - Permita minimizar.
-    - No permita maximizar.
+    - Si permita maximizar.
     - No permita redimensionar.
     - Permita cambiar de ventana.
     - Muestre la barra de tareas.
@@ -19,7 +19,7 @@ def bloquear_ventana_robusta(ventana):
         ventana (tk.Tk o tk.Toplevel): Ventana que se desea bloquear
     """
     # Verificar si el usuario es "jhuizar"
-    if getpass.getuser().lower() != "jhuizar":
+    if getpass.getuser().lower() != "lmacias":
         return  # No hacer nada si el usuario no es "jhuizar"
 
     # Evitar redimensionamiento
