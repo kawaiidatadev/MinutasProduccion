@@ -29,16 +29,10 @@ class HistorialAcuerdos:
         """Configura los eventos del Treeview"""
         self.acuerdos_tree.bind("<Double-1>", self.on_double_click)
 
-
+from acuerdos.ventana_names import move_to_largest_monitor
 
     def center_window(self):
-        """Centra la ventana en la pantalla"""
-        self.window.update_idletasks()
-        width = self.window.winfo_width()
-        height = self.window.winfo_height()
-        x = (self.window.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.window.winfo_screenheight() // 2) - (height // 2)
-        self.window.geometry(f'{width}x{height}+{x}+{y}')
+        move_to_largest_monitor(self)
 
     def create_ui(self):
         # Crear ventana principal con estilo consistente

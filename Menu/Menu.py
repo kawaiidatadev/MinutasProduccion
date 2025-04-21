@@ -1,12 +1,7 @@
-import time
-
-from PIL import Image, ImageTk
 from collections import Counter
 from tabla_principal import mostrar_tabla_acuerdos
 from common import *
 import sys
-from ctypes import windll, WinDLL
-from tkinter import font
 import ctypes
 from ctypes import wintypes
 from tkinter import font
@@ -228,7 +223,8 @@ def show_main_menu(db_path):
                     metrics["total_cerrados"] = count
 
             # 2. Responsable más frecuente (nuevo enfoque)
-            cursor.execute("SELECT responsables FROM acuerdos")
+            cursor.execute("SELECT DISTINCT nombre FROM usuarios WHERE estatus != 'Eliminado' AND LENGTH(nombre) >"
+                           " 10 ORDER BY nombre")
             all_responsables = []
 
             for (responsables,) in cursor.fetchall():

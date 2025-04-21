@@ -6,6 +6,7 @@ from acuerdos.guardar_responsables import save_responsables
 from acuerdos.limpiar_filtros import clear_filters
 from audio import texto_a_voz, play_audio_async
 
+
 def word_acuerdos(root, db_path):
     """Muestra una ventana con el historial de acuerdos y permite su edición"""
     # Crear ventana principal
@@ -53,7 +54,7 @@ def word_acuerdos(root, db_path):
     # Estilo para los frames
     style = ttk.Style()
     style.configure('Custom.TFrame', background='#f0f0f0')
-    style.configure('Treeview', rowheight=30)  # Altura de fila mayor para múltiples líneas
+    style.configure('Treeview', rowheight=50)  # Altura de fila mayor para múltiples líneas
 
     # Frame para filtros
     filter_frame = ttk.Frame(window, padding=(10, 10, 10, 10), style='Custom.TFrame')
@@ -142,6 +143,18 @@ def word_acuerdos(root, db_path):
     style.configure('Play.TButton', background='#9b59b6')
     style.map('Play.TButton',
               background=[('pressed', '!disabled', '#8e44ad'), ('active', '#af7ac5')])
+
+    # Aplica un estilo personalizado para las filas
+    style.configure('Treeview.Item', padding=(0, 10, 0, 10))  # Ajusta el padding vertical (arriba/abajo)
+
+    # Configuración adicional para texto multi-línea
+    style.layout("Treeview.Item", [
+        ('Treeitem.padding', {'sticky': 'nswe', 'children': [
+            ('Treeitem.indicator', {'side': 'left', 'sticky': ''}),
+            ('Treeitem.image', {'side': 'left', 'sticky': ''}),
+            ('Treeitem.text', {'side': 'left', 'sticky': ''})
+        ]})
+    ])
 
     # Funciones para los botones
     from acuerdos.exp_excels import exportar_excel
@@ -268,7 +281,7 @@ def word_acuerdos(root, db_path):
         tree_frame,
         columns=("id", "acuerdo", "responsables", "fecha", "estatus", "fecha_compromiso", "comentarios", "accion"),
         show="headings",
-        height=10  # Más filas visibles
+        height=15  # Más filas visibles
     )
 
     # Configurar columnas

@@ -188,7 +188,9 @@ def cerrar_acuerdo(parent_window, db_path):
         details_window.geometry("600x500")
 
         # Centrar la ventana
-        center_window(details_window)
+        #center_window(details_window)
+        from acuerdos.ventana_names import move_to_largest_monitor
+        move_to_largest_monitor(details_window)
 
         # Estilos
         bg_color = "#f0f0f0"
@@ -400,13 +402,8 @@ def cerrar_acuerdo(parent_window, db_path):
         ).pack(side="right", padx=10)
 
     def center_window(window):
-        """Centra una ventana en la pantalla"""
-        window.update_idletasks()
-        width = window.winfo_width()
-        height = window.winfo_height()
-        x = (window.winfo_screenwidth() // 2) - (width // 2)
-        y = (window.winfo_screenheight() // 2) - (height // 2)
-        window.geometry(f"{width}x{height}+{x}+{y}")
+       from acuerdos.ventana_names import move_to_largest_monitor
+        move_to_largest_monitor(window)
 
     def generate_pdf_report(id_acuerdo, acuerdo, responsables, fecha_registro,
                             fecha_compromiso, fecha_cierre, comentarios,

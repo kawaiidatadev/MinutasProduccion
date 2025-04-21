@@ -24,7 +24,7 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
     details_window.geometry("600x500")
 
     # Centrar la ventana
-    center_window(details_window)
+    #center_window(details_window)
     from acuerdos.ventana_names import move_to_largest_monitor
     move_to_largest_monitor(details_window)
     print("simon we 2")
