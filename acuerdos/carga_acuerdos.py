@@ -2,6 +2,31 @@ from common import *
 from acuerdos.fromato_texto import formatear_texto
 from acuerdos.cerrar_2 import cerrar_acuerdo_seleccionado
 
+
+def abreviar_nombres(nombres_completos):
+    """Abrevia los nombres a primer nombre + primera letra del segundo"""
+    if not nombres_completos:
+        return ""
+
+    nombres = nombres_completos.split(',')
+    nombres_abreviados = []
+
+    for nombre in nombres:
+        nombre = nombre.strip()
+        partes = nombre.split()
+
+        if len(partes) == 0:
+            continue
+        elif len(partes) == 1:
+            # Solo tiene un nombre
+            nombres_abreviados.append(partes[0])
+        else:
+            # Primer nombre + primera letra del segundo
+            abreviado = f"{partes[0]} {partes[1][0]}."
+            nombres_abreviados.append(abreviado)
+
+    return ', '.join(nombres_abreviados)
+
 def load_acuerdos(acuerdos_tree, db_path, id_filter, text_filter, resp_filter, date_from, date_to, status_filter):
     """Carga los acuerdos principales según los filtros aplicados."""
 
@@ -99,7 +124,9 @@ def load_acuerdos(acuerdos_tree, db_path, id_filter, text_filter, resp_filter, d
 
             # Formatear campos largos
             formatted_row[1] = formatear_texto(formatted_row[1])  # acuerdo
-            formatted_row[2] = formatear_texto(formatted_row[2])  # responsables
+            #formatted_row[2] = formatear_texto(formatted_row[2])  # responsables
+            formatted_row[2] = abreviar_nombres(formatted_row[2])  # responsables abreviados
+
             formatted_row[4] = formatear_texto(formatted_row[4])  # accion
             formatted_row[6] = formatear_texto(formatted_row[6] if formatted_row[6] else "")  # comentarios
 
@@ -117,9 +144,6 @@ def load_acuerdos(acuerdos_tree, db_path, id_filter, text_filter, resp_filter, d
             # Insertar en el Treeview
             item_id = acuerdos_tree.insert("", "end", values=values_to_insert, tags=tags)
             acuerdos_tree.item(item_id, tags=tags + ('wraptext', 'no_underline'))
-
-
-
 
         conn.close()
 
