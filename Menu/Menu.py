@@ -6,6 +6,7 @@ import ctypes
 from ctypes import wintypes
 from tkinter import font
 import logging
+from sql.db import crear_nueva_minuta
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -503,11 +504,11 @@ def show_main_menu(db_path):
     # Mostrar tabla de acuerdos activos
     mostrar_tabla_acuerdos(main_frame, db_path)
 
-    # Marco contenedor para ambos botones (centrado)
+    # Marco contenedor para los tres botones (centrado)
     buttons_container = tk.Frame(main_frame, bg=bg_color)
     buttons_container.pack(pady=20, fill='x')
 
-    # Configuración común para ambos botones
+    # Configuración común para todos los botones
     button_style = {
         'font': ('Helvetica', 11, 'bold'),
         'height': 2,
@@ -517,19 +518,38 @@ def show_main_menu(db_path):
         'activeforeground': text_color
     }
 
+
+    # Definir color para el nuevo botón (puedes ajustar estos valores)
+    new_button_color = '#4CAF50'  # Verde
+    new_button_hover = '#45a049'  # Verde oscuro
+
     # Botón de Acuerdos Interactivos (mejorado)
-    btn = tk.Button(
+    btn_interactivos = tk.Button(
         buttons_container,
-        text="ACUERDOS INTERACTIVOS",
+        text="ACUERDOS",
         command=button_action,
         bg=button_color,
         fg=text_color,
         activebackground=button_hover,
         relief='raised',
-        width=22,
+        width=20,
         **button_style
     )
-    btn.pack(side='left', expand=True, padx=(0, 15))
+    btn_interactivos.pack(side='left', expand=True, padx=(0, 10))
+
+    # Nuevo botón para crear minuta
+    btn_minuta = tk.Button(
+        buttons_container,
+        text="NUEVA MINUTA",
+        command=crear_nueva_minuta,  # Asegúrate de definir esta función
+        bg=new_button_color,
+        fg=text_color,
+        activebackground=new_button_hover,
+        relief='raised',
+        width=20,
+        **button_style
+    )
+    btn_minuta.pack(side='left', expand=True, padx=10)
 
     # Botón de Salir (mejorado)
     exit_button = tk.Button(
@@ -543,11 +563,15 @@ def show_main_menu(db_path):
         width=18,
         **button_style
     )
-    exit_button.pack(side='right', expand=True, padx=(15, 0))
+    exit_button.pack(side='right', expand=True, padx=(10, 0))
 
-    # Efectos hover mejorados para ambos botones
-    btn.bind("<Enter>", lambda e: btn.config(bg=button_hover, relief='sunken'))
-    btn.bind("<Leave>", lambda e: btn.config(bg=button_color, relief='raised'))
+    # Efectos hover mejorados para todos los botones
+    btn_interactivos.bind("<Enter>", lambda e: btn_interactivos.config(bg=button_hover, relief='sunken'))
+    btn_interactivos.bind("<Leave>", lambda e: btn_interactivos.config(bg=button_color, relief='raised'))
+
+    btn_minuta.bind("<Enter>", lambda e: btn_minuta.config(bg=new_button_hover, relief='sunken'))
+    btn_minuta.bind("<Leave>", lambda e: btn_minuta.config(bg=new_button_color, relief='raised'))
+
     exit_button.bind("<Enter>", lambda e: exit_button.config(
         bg=exit_button_hover,
         relief='sunken'

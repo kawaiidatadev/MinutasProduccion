@@ -125,3 +125,7 @@ def db_create():
     except Exception as e:
         root.destroy()
         return str(e)
+
+
+def crear_nueva_minuta():
+    print("Nueva minuta")

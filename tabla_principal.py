@@ -18,6 +18,31 @@ def mostrar_tabla_acuerdos(parent, db_path):
         )
         lbl_titulo.pack(anchor="w", pady=(0, 5))
 
+        # Línea de estado de conexión
+        frame_status = tk.Frame(frame_contenedor, bg="#f5f7fa")
+        frame_status.pack(anchor="w", pady=(0, 10))
+
+        # Indicador verde de conexión
+        canvas = tk.Canvas(frame_status, width=16, height=16, bg="#f5f7fa", highlightthickness=0)
+        canvas.create_oval(2, 2, 14, 14, fill="#28a745", outline="")
+        canvas.pack(side="left", padx=(0, 5))
+
+        # Texto de conexión
+        db_name = os.path.basename(db_path).rsplit(".db", 1)[0]  # Eliminar la extensión
+        if db_name == "minutas":
+            db_name = "Minutas Producción"
+        else:
+            db_name = "Minutas personales"
+
+        lbl_conexion = tk.Label(
+            frame_status,
+            text=f"Conectado a {db_name}",
+            bg="#f5f7fa",
+            fg="#6c757d",
+            font=font.Font(family="Helvetica", size=9, slant="italic")
+        )
+        lbl_conexion.pack(side="left")
+
         # Frame para la tabla
         frame_tabla = tk.Frame(frame_contenedor)
         frame_tabla.pack(fill="both", expand=True)
