@@ -280,7 +280,7 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
                         break
 
             details_window.destroy()
-            messagebox.showinfo("Éxito", f"Acuerdo {id_acuerdo} cerrado correctamente")
+            #messagebox.showinfo("Éxito", f"Acuerdo {id_acuerdo} cerrado correctamente")
 
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cerrar el acuerdo: {str(e)}")

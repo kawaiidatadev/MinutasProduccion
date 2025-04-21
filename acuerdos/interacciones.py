@@ -725,7 +725,7 @@ def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_p
                     conn.close()
 
                     edit_window.destroy()
-                    messagebox.showinfo("Éxito", "Nombre actualizado correctamente")
+                    #messagebox.showinfo("Éxito", "Nombre actualizado correctamente")
                 except Exception as e:
                     messagebox.showerror("Error", f"No se pudo actualizar el nombre: {e}")
 

@@ -55,7 +55,7 @@ def save_commitment_date(item, new_date_str, edit_window, acuerdos_tree, histori
         if acuerdos_tree.focus() == item:
             load_historial(None, acuerdos_tree, historial_tree, historial_label, db_path)
 
-        messagebox.showinfo("Éxito", "Fecha de compromiso actualizada correctamente.")
+        #messagebox.showinfo("Éxito", "Fecha de compromiso actualizada correctamente.")
         edit_window.destroy()
 
     except Exception as e:
