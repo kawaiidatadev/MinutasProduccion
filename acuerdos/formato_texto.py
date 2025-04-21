@@ -1,6 +1,6 @@
 from common import *
 
-def formatear_texto(texto, ancho=40):
+def formatear_texto(texto, ancho=50):
     """Formatea el texto con saltos de línea cada cierto ancho"""
     if not texto:
         return ""

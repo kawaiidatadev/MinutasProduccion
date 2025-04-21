@@ -566,38 +566,55 @@ def save_agreement_text(item, new_text, edit_window, acuerdos_tree, historial_tr
 
 
 def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_path):
-    """Permite editar los responsables con doble clic"""
+    """Permite editar los responsables mostrando nombres completos"""
     current_responsables = acuerdos_tree.item(item, "values")[2]
     id_acuerdo = acuerdos_tree.item(item, "values")[0]
 
     # Crear ventana
     resp_window = tk.Toplevel(acuerdos_tree.winfo_toplevel())
     resp_window.title("Editar Responsables")
-    resp_window.geometry("700x500")  # <<< Ajusta el ancho y alto aquí
+    resp_window.geometry("700x500")
     resp_window.transient(acuerdos_tree.winfo_toplevel())
     resp_window.grab_set()
     from acuerdos.ventana_names import move_to_largest_monitor
     move_to_largest_monitor(resp_window)
-    print("simon we")
 
-
-
-    # Obtener responsables
+    # Obtener responsables COMPLETOS de la base de datos
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
+
+        # Obtener nombres completos de usuarios activos
         cursor.execute("SELECT DISTINCT nombre FROM usuarios WHERE nombre != '' AND estatus != 'Eliminado'")
-        all_responsables = set()
-        for row in cursor.fetchall():
-            all_responsables.update(row[0].split(", "))
+        all_responsables_completos = [row[0] for row in cursor.fetchall()]
+
+        # Obtener los responsables actuales del acuerdo (en formato abreviado)
+        current_selection_abreviados = current_responsables.split(", ") if current_responsables else []
+
+        # Mapear nombres abreviados a completos
+        nombres_completos = []
+        for abreviado in current_selection_abreviados:
+            # Buscar coincidencia insensible a mayúsculas/minúsculas
+            for completo in all_responsables_completos:
+                partes = completo.split()
+                if len(partes) >= 2:
+                    formato_abreviado = f"{partes[0]} {partes[1][0]}."
+                    if formato_abreviado.lower() == abreviado.lower():
+                        nombres_completos.append(completo)
+                        break
+            else:
+                # Si no encuentra coincidencia, usar el nombre tal cual
+                nombres_completos.append(abreviado)
+
         conn.close()
     except Exception as e:
         messagebox.showerror("Error", f"No se pudieron cargar los responsables: {e}")
         return
 
-    all_responsables = sorted(all_responsables)
-    current_selection = current_responsables.split(", ") if current_responsables else []
-    disponibles = [r for r in all_responsables if r not in current_selection]
+    # Preparar listas
+    all_responsables_completos = sorted(all_responsables_completos)
+    current_selection = nombres_completos  # Usamos los nombres completos
+    disponibles = [r for r in all_responsables_completos if r not in current_selection]
 
     # Frame principal
     main_frame = ttk.Frame(resp_window)

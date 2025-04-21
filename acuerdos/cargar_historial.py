@@ -1,5 +1,5 @@
 from common import *
-from acuerdos.fromato_texto import formatear_texto
+from acuerdos.formato_texto import formatear_texto
 
 
 
