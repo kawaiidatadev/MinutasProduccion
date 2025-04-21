@@ -457,7 +457,7 @@ def editar_acuerdo(parent_window, db_path):
                 conn.commit()
                 conn.close()
 
-                messagebox.showinfo("Éxito", "Acuerdo actualizado correctamente")
+                # messagebox.showinfo("Éxito", "Acuerdo actualizado correctamente")
                 edit_window.destroy()
                 parent_window.deiconify()
 
