@@ -136,13 +136,34 @@ def highlight_changes(event, historial_tree):
     if len(historial_tree.get_children()) <= 1:
         return
 
-    # Obtener items a comparar
+    # Verificar si hay algún cambio en cualquier versión
+    has_changes = False
     items = historial_tree.get_children()
+
+    # Primera pasada: verificar si hay algún cambio
     for i in range(len(items) - 1):
         current_item = items[i]
         previous_item = items[i + 1]
 
-        # Comparar cada campo
+        for col in historial_tree["columns"]:
+            current_val = historial_tree.set(current_item, col)
+            previous_val = historial_tree.set(previous_item, col)
+
+            if current_val != previous_val:
+                has_changes = True
+                break
+        if has_changes:
+            break
+
+    # Si no hay cambios, salir de la función
+    if not has_changes:
+        return
+
+    # Segunda pasada: aplicar el resaltado solo si hay cambios
+    for i in range(len(items) - 1):
+        current_item = items[i]
+        previous_item = items[i + 1]
+
         for col in historial_tree["columns"]:
             current_val = historial_tree.set(current_item, col)
             previous_val = historial_tree.set(previous_item, col)

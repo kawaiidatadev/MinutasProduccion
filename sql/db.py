@@ -4,14 +4,14 @@ import getpass
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
-
+from rutas import DB_PATH
 
 class MinutasDB:
     def __init__(self, root=None):
         self.root = root
         self.current_user = getpass.getuser()
         self.db_created = False
-        self.db_path = r'\\mercury\Producción\Minutas Produccion\Program Files\minutas.db'
+        self.db_path = DB_PATH
 
         # Intentar crear la base de datos en la ubicación especificada
         if not self.try_create_db():

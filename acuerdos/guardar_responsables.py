@@ -101,7 +101,7 @@ def save_responsables(item, new_responsables, edit_window, acuerdos_tree, histor
         if acuerdos_tree.focus() == item:
             load_historial(None, acuerdos_tree, historial_tree, historial_label, db_path)
 
-        messagebox.showinfo("Éxito", f"Responsables actualizados. Nuevos registros: {len(new_users_to_add)}")
+        #messagebox.showinfo("Éxito", f"Responsables actualizados. Nuevos registros: {len(new_users_to_add)}")
         edit_window.destroy()
 
     except Exception as e:

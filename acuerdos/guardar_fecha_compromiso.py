@@ -5,7 +5,7 @@ def save_commitment_date(item, new_date_str, edit_window, acuerdos_tree, histori
     current_date_str = acuerdos_tree.item(item, "values")[5]
 
     if new_date_str == current_date_str:
-        messagebox.showinfo("Información", "No se realizaron cambios.")
+        #messagebox.showinfo("Información", "No se realizaron cambios.")
         edit_window.destroy()
         return
 

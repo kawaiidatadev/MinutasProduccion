@@ -458,7 +458,7 @@ def registrar_acuerdo(parent_window, db_path):
             conn.commit()
             conn.close()
 
-            messagebox.showinfo("Éxito", "Acuerdo registrado correctamente")
+            #messagebox.showinfo("Éxito", "Acuerdo registrado correctamente")
             reg_window.destroy()
             parent_window.deiconify()
 

@@ -762,7 +762,7 @@ def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_p
                 conn.commit()
                 conn.close()
 
-                messagebox.showinfo("Éxito", "Usuario marcado como eliminado correctamente")
+                #messagebox.showinfo("Éxito", "Usuario marcado como eliminado correctamente")
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudo actualizar el usuario: {e}")
 
