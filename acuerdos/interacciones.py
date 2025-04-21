@@ -570,12 +570,23 @@ def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_p
     current_responsables = acuerdos_tree.item(item, "values")[2]
     id_acuerdo = acuerdos_tree.item(item, "values")[0]
 
-    # Crear ventana
+    # Crear una nueva ventana secundaria (hija) de la ventana principal
     resp_window = tk.Toplevel(acuerdos_tree.winfo_toplevel())
+
+    # Establecer el título de la ventana secundaria
     resp_window.title("Editar Responsables")
+
+    # Definir el tamaño de la ventana secundaria (ancho x alto)
     resp_window.geometry("700x500")
+
+    # Hacer que la ventana secundaria esté ligada (asociada) a la ventana principal,
+    # evitando que aparezca como una ventana completamente independiente
     resp_window.transient(acuerdos_tree.winfo_toplevel())
+
+    # Establecer el enfoque (focus) exclusivamente en esta ventana,
+    # bloqueando la interacción con otras ventanas hasta que esta se cierre
     resp_window.grab_set()
+
     from acuerdos.ventana_names import move_to_largest_monitor
     move_to_largest_monitor(resp_window)
 

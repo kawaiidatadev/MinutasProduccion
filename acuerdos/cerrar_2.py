@@ -9,10 +9,7 @@ from tkinter import filedialog, messagebox
 import tkinter as tk
 
 
-# Función para cerrar un acuerdo (versión modificada)
 def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
-
-    print("cerrar 2.py")
     """Cierra un acuerdo con comentarios y evidencias, y actualiza el Treeview"""
     # Ruta base para guardar las evidencias
     from rutas import BASE_EVIDENCIAS
@@ -21,47 +18,112 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
     # Crear ventana para capturar detalles del cierre
     details_window = tk.Toplevel()
     details_window.title(f"Cerrar Acuerdo {id_acuerdo}")
-    details_window.geometry("600x500")
+    details_window.geometry("800x600")
 
     # Centrar la ventana
-    #center_window(details_window)
     from acuerdos.ventana_names import move_to_largest_monitor
     move_to_largest_monitor(details_window)
-    print("simon we 2")
+
+    # Maximizar la ventana según el sistema operativo
+    if sys.platform == 'win32':
+        details_window.state('zoomed')  # Para Windows
 
     # Estilos
     bg_color = "#f0f0f0"
     header_color = "#2c3e50"
     text_color = "#ecf0f1"
+    btn_style = {'font': ('Helvetica', 10), 'width': 15, 'padx': 10, 'pady': 5}
 
     # Header
-    header = tk.Frame(details_window, bg=header_color, height=40)
+    header = tk.Frame(details_window, bg=header_color, height=50)
     header.pack(fill="x", side="top")
 
     tk.Label(
         header,
-        text=f"Cerrar Acuerdo {id_acuerdo}",
+        text=f"CERRAR ACUERDO {id_acuerdo}",
         bg=header_color,
         fg=text_color,
-        font=("Helvetica", 12, "bold")
-    ).pack(side="left", padx=20)
+        font=("Helvetica", 14, "bold")
+    ).pack(side="left", padx=20, pady=10)
 
-    # Frame principal
-    main_frame = tk.Frame(details_window, bg=bg_color, padx=10, pady=10)
+    # Frame principal con padding
+    main_frame = tk.Frame(details_window, bg=bg_color, padx=20, pady=20)
     main_frame.pack(fill="both", expand=True)
+    main_frame.columnconfigure(0, weight=1)
+    main_frame.rowconfigure(3, weight=1)
 
-    # Comentarios del cierre
-    tk.Label(main_frame, text="Comentarios del cierre:", bg=bg_color).pack(anchor="w")
-    comentarios_text = tk.Text(main_frame, height=8, width=70)
-    comentarios_text.pack(pady=5)
-    comentarios_text.focus_set()  # Esto pondrá el cursor en el widget Text
+    # Sección de comentarios
+    comentarios_frame = tk.Frame(main_frame, bg=bg_color)
+    comentarios_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 15))
 
-    # Frame para evidencias
+    tk.Label(
+        comentarios_frame,
+        text="Comentarios del cierre:",
+        bg=bg_color,
+        font=("Helvetica", 10, "bold"),
+        anchor="w"
+    ).pack(fill="x", pady=(0, 5))
+
+    scroll_y = tk.Scrollbar(comentarios_frame, orient="vertical")
+    comentarios_text = tk.Text(
+        comentarios_frame,
+        height=8,
+        wrap=tk.WORD,
+        yscrollcommand=scroll_y.set,
+        font=("Helvetica", 10),
+        padx=10,
+        pady=10
+    )
+    scroll_y.config(command=comentarios_text.yview)
+
+    comentarios_text.pack(side="left", fill="both", expand=True)
+    scroll_y.pack(side="right", fill="y")
+    comentarios_text.focus_set()
+
+    # Sección de evidencias
     evidence_frame = tk.Frame(main_frame, bg=bg_color)
-    evidence_frame.pack(fill="x", pady=10)
+    evidence_frame.grid(row=1, column=0, sticky="nsew", pady=(0, 15))
+    evidence_frame.columnconfigure(0, weight=3)
+    evidence_frame.columnconfigure(1, weight=1)
+    evidence_frame.rowconfigure(1, weight=1)
+
+    tk.Label(
+        evidence_frame,
+        text="Archivos de evidencia:",
+        bg=bg_color,
+        font=("Helvetica", 10, "bold"),
+        anchor="w"
+    ).grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 5))
 
     # Lista de archivos a subir
     files_to_upload = []
+
+    # Listbox con scrollbars
+    list_frame = tk.Frame(evidence_frame, bg=bg_color)
+    list_frame.grid(row=1, column=0, sticky="nsew", padx=(0, 10))
+
+    scroll_y = tk.Scrollbar(list_frame, orient="vertical")
+    scroll_x = tk.Scrollbar(list_frame, orient="horizontal")
+
+    evidence_list = tk.Listbox(
+        list_frame,
+        height=4,
+        yscrollcommand=scroll_y.set,
+        xscrollcommand=scroll_x.set,
+        font=("Helvetica", 10),
+        selectbackground="#3498db"
+    )
+
+    scroll_y.config(command=evidence_list.yview)
+    scroll_x.config(command=evidence_list.xview)
+
+    evidence_list.pack(side="left", fill="both", expand=True)
+    scroll_y.pack(side="right", fill="y")
+    scroll_x.pack(side="bottom", fill="x")
+
+    # Botones para manejar evidencias
+    btn_frame = tk.Frame(evidence_frame, bg=bg_color)
+    btn_frame.grid(row=1, column=1, sticky="ns")
 
     def add_evidence_file():
         file_paths = filedialog.askopenfilenames(
@@ -81,31 +143,33 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
             files_to_upload.pop(index)
             evidence_list.delete(index)
 
-    # Lista de evidencias
-    evidence_label = tk.Label(evidence_frame, text="Archivos de evidencia:", bg=bg_color)
-    evidence_label.grid(row=0, column=0, columnspan=2, sticky="w")
-
-    evidence_list = tk.Listbox(evidence_frame, height=4, width=50)
-    evidence_list.grid(row=1, column=0, padx=(0, 10))
-
-    # Botones para manejar evidencias
     btn_add = tk.Button(
-        evidence_frame,
+        btn_frame,
         text="Agregar",
         command=add_evidence_file,
-        width=10
+        bg="#2980b9",
+        fg="white",
+        **btn_style
     )
-    btn_add.grid(row=1, column=1, sticky="n", pady=2)
+    btn_add.pack(pady=(0, 10), fill="x")
 
     btn_remove = tk.Button(
-        evidence_frame,
+        btn_frame,
         text="Quitar",
         command=remove_evidence_file,
-        width=10
+        bg="#e74c3c",
+        fg="white",
+        **btn_style
     )
-    btn_remove.grid(row=1, column=1, sticky="s", pady=2)
+    btn_remove.pack(fill="x")
 
-    # Función para confirmar el cierre
+    # Botones de acción (centrados)
+    button_frame = tk.Frame(main_frame, bg=bg_color)
+    button_frame.grid(row=3, column=0, sticky="ew", pady=(20, 0))
+    button_frame.columnconfigure(0, weight=1)
+    button_frame.columnconfigure(1, weight=1)
+    button_frame.columnconfigure(2, weight=1)
+
     def confirmar_cierre():
         comentarios = comentarios_text.get("1.0", "end").strip()
 
@@ -144,7 +208,7 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
             )[:50]  # Limitar longitud
 
             base_path = os.path.join(
-                BASE_EVIDENCIAS,  # Usamos la nueva ruta base
+                BASE_EVIDENCIAS,
                 year_folder,
                 month_folder,
                 clean_responsables,
@@ -160,9 +224,7 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
                 shutil.copy2(file_path, dest_path)
                 evidence_paths.append(dest_path)
 
-
-
-            # Generar reporte PDF (esto ya existe en tu código)
+            # Generar reporte PDF
             pdf_path = generate_pdf_report(
                 id_acuerdo, acuerdo_text, responsables,
                 fecha_reg, fecha_comp, fecha_cierre,
@@ -173,7 +235,7 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
             cursor.execute(
                 """INSERT INTO historial_acuerdos 
                 (id_acuerdo, acuerdo, responsables, fecha_compromiso, 
-                 fecha_modificacion, usuario_modifico, estatus, comentarios_cierre,ruta_pdf)
+                 fecha_modificacion, usuario_modifico, estatus, comentarios_cierre, ruta_pdf)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     id_acuerdo,
@@ -214,37 +276,43 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
                         values = list(tree.item(item, "values"))
                         values[4] = "Cerrado"  # Actualizar estatus
                         tree.item(item, values=values)
-                        # Actualizar tags para cambiar el estilo si es necesario
                         tree.item(item, tags=('cerrado',))
                         break
 
-
             details_window.destroy()
+            messagebox.showinfo("Éxito", f"Acuerdo {id_acuerdo} cerrado correctamente")
 
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo cerrar el acuerdo: {str(e)}")
 
-    # Botones de acción
-    button_frame = tk.Frame(main_frame, bg=bg_color)
-    button_frame.pack(pady=10)
-
-    tk.Button(
+    # Botones inferiores centrados
+    btn_confirmar = tk.Button(
         button_frame,
         text="Confirmar Cierre",
         command=confirmar_cierre,
         bg="#27ae60",
         fg="white",
-        width=15
-    ).pack(side="left", padx=10)
+        **btn_style
+    )
+    btn_confirmar.grid(row=0, column=1, padx=10, sticky="e")
 
-    tk.Button(
+    btn_cancelar = tk.Button(
         button_frame,
         text="Cancelar",
         command=details_window.destroy,
         bg="#e74c3c",
         fg="white",
-        width=15
-    ).pack(side="right", padx=10)
+        **btn_style
+    )
+    btn_cancelar.grid(row=0, column=2, padx=10, sticky="w")
+
+    # Añadir espacio para centrar los botones
+    button_frame.grid_columnconfigure(0, weight=1)
+    button_frame.grid_columnconfigure(3, weight=1)
+
+    # Asegurar que la ventana se muestre correctamente
+    details_window.update()
+    details_window.minsize(details_window.winfo_width(), details_window.winfo_height())
 
 
 def generate_pdf_report(id_acuerdo, acuerdo, responsables, fecha_registro,

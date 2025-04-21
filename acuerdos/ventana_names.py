@@ -190,3 +190,5 @@ class WindowManager:
 def move_to_largest_monitor(window):
     """Función de interfaz mantenida para compatibilidad"""
     WindowManager().move_to_largest_monitor(window)
+
+
