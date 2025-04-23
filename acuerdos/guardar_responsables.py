@@ -86,8 +86,8 @@ def save_responsables(item, new_responsables, edit_window, acuerdos_tree, histor
         for responsable in new_users_to_add:
             cursor.execute(
                 """INSERT INTO usuarios 
-                (nombre, fecha_registro, usuario_registra) 
-                VALUES (?, datetime('now'), ?)""",
+                (nombre, fecha_registro, usuario_registra, estatus) 
+                VALUES (?, datetime('now'), ?, 'Activo')""",
                 (responsable, usuario_actual)
             )
 

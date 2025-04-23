@@ -569,15 +569,12 @@ def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_p
     """Permite editar los responsables mostrando nombres completos"""
     current_responsables = acuerdos_tree.item(item, "values")[2]
     id_acuerdo = acuerdos_tree.item(item, "values")[0]
-
     # Crear una nueva ventana secundaria (hija) de la ventana principal
     resp_window = tk.Toplevel(acuerdos_tree.winfo_toplevel())
-
     # Establecer el título de la ventana secundaria
     resp_window.title("Editar Responsables")
-
     # Definir el tamaño de la ventana secundaria (ancho x alto)
-    resp_window.geometry("700x500")
+    # resp_window.geometry("700x1000")
 
     # Hacer que la ventana secundaria esté ligada (asociada) a la ventana principal,
     # evitando que aparezca como una ventana completamente independiente
@@ -589,6 +586,12 @@ def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_p
 
     from acuerdos.ventana_names import move_to_largest_monitor
     move_to_largest_monitor(resp_window)
+    # # Maximizar la ventana según el sistema operativo
+    # if sys.platform == 'win32':
+    #     print("zomed menu.py")
+    #     resp_window.state('zoomed')  # Para Windows
+
+
 
     # Obtener responsables COMPLETOS de la base de datos
     try:
@@ -693,6 +696,8 @@ def edit_responsables(item, acuerdos_tree, historial_tree, historial_label, db_p
         # Ventana para editar
         edit_window = tk.Toplevel(resp_window)
         edit_window.title("Editar nombre")
+        from acuerdos.ventana_names import move_to_largest_monitor
+        move_to_largest_monitor(edit_window)
 
         ttk.Label(edit_window, text="Nuevo nombre:").pack(padx=10, pady=5)
         nuevo_nombre_entry = ttk.Entry(edit_window, width=30)

@@ -233,7 +233,7 @@ def registrar_acuerdo(parent_window, db_path):
 
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT nombre FROM usuarios ORDER BY nombre")
+        cursor.execute("SELECT DISTINCT nombre FROM usuarios ORDER BY nombre WHERE estatus != 'Eliminado'")
         responsables = cursor.fetchall()
         conn.close()
 
