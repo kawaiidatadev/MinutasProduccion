@@ -223,9 +223,9 @@ def show_main_menu(db_path):
                 elif estatus == "Cerrado":
                     metrics["total_cerrados"] = count
 
-            # 2. Responsable más frecuente (nuevo enfoque)
-            cursor.execute("SELECT DISTINCT nombre FROM usuarios WHERE estatus != 'Eliminado' AND LENGTH(nombre) >"
-                           " 10 ORDER BY nombre")
+            # 2. Responsable más frecuente
+            from sql.querys import usuarios_frecuentes_card
+            cursor.execute(usuarios_frecuentes_card)
             all_responsables = []
 
             for (responsables,) in cursor.fetchall():

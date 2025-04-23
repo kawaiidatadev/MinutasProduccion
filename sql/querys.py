@@ -102,3 +102,24 @@ FROM usuarios
 WHERE estatus = 'Activo'
 ORDER BY nombre COLLATE NOCASE ASC;
 """
+
+usuarios_frecuentes_card = """WITH RECURSIVE split_responsables AS (
+    SELECT 
+        substr(responsables || ', ', 0, instr(responsables || ', ', ', ')) AS nombre,
+        substr(responsables, instr(responsables || ', ', ', ') + 2) AS remaining
+    FROM acuerdos
+    WHERE estatus != 'Cerrado' AND LENGTH(responsables) > 3
+
+    UNION ALL
+
+    SELECT
+        substr(remaining, 0, instr(remaining || ', ', ', ')),
+        substr(remaining, instr(remaining || ', ', ', ') + 2)
+    FROM split_responsables
+    WHERE remaining != ''
+)
+SELECT trim(nombre) AS nombre
+FROM split_responsables
+WHERE nombre != ''
+ORDER BY nombre COLLATE NOCASE ASC
+"""
