@@ -344,31 +344,8 @@ def registrar_acuerdo(parent_window, db_path):
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
-                WITH RECURSIVE split_responsables AS (
-                    SELECT 
-                        substr(responsables || ',', 0, instr(responsables || ',', ',')) AS nombre,
-                        substr(responsables, instr(responsables || ',', ',') + 1) AS remaining
-                    FROM acuerdos
-                    WHERE responsables != '' AND responsables IS NOT NULL
-
-                    UNION ALL
-
-                    SELECT
-                        substr(remaining, 0, instr(remaining || ',', ',')),
-                        substr(remaining, instr(remaining || ',', ',') + 1)
-                    FROM split_responsables
-                    WHERE remaining != ''
-                )
-                SELECT DISTINCT trim(nombre) AS nombre
-                FROM split_responsables
-                WHERE nombre != ''
-                UNION
-                SELECT DISTINCT nombre 
-                FROM usuarios
-                WHERE nombre IS NOT NULL AND nombre != ''
-                ORDER BY nombre COLLATE NOCASE ASC
-            """)
+            from sql.querys import usuarios_prioridad_sin_eliminados
+            cursor.execute(usuarios_prioridad_sin_eliminados)
 
             # Procesar resultados para eliminar duplicados y filtrar
             unique_names = set()
