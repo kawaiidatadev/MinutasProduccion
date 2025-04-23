@@ -170,7 +170,7 @@ def editar_acuerdo(parent_window, db_path):
                 # Obtener todos los responsables disponibles
                 conn = sqlite3.connect(db_path)
                 cursor = conn.cursor()
-                cursor.execute("SELECT DISTINCT nombre FROM usuarios ORDER BY nombre")
+                cursor.execute("SELECT DISTINCT nombre FROM usuarios ORDER BY nombre WHERE estatus != 'Eliminado'")
                 todos_responsables = [r[0] for r in cursor.fetchall()]
                 conn.close()
 
@@ -378,7 +378,7 @@ def editar_acuerdo(parent_window, db_path):
 
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT nombre FROM usuarios ORDER BY nombre")
+        cursor.execute("SELECT DISTINCT nombre FROM usuarios ORDER BY nombre  WHERE estatus != 'Eliminado'")
         responsables = cursor.fetchall()
         conn.close()
 
@@ -561,7 +561,7 @@ def editar_acuerdo(parent_window, db_path):
         try:
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT nombre FROM usuarios ORDER BY nombre")
+            cursor.execute("SELECT DISTINCT nombre FROM usuarios ORDER BY nombre WHERE estatus != 'Eliminado'")
             responsables = [r[0] for r in cursor.fetchall()]
             conn.close()
             responsable_cb['values'] = responsables
