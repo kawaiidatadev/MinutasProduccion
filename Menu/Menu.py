@@ -590,6 +590,9 @@ def show_main_menu(db_path):
     btn_minuta.bind("<Enter>", lambda e: btn_minuta.config(bg=new_button_hover, relief='sunken'))
     btn_minuta.bind("<Leave>", lambda e: btn_minuta.config(bg=new_button_color, relief='raised'))
 
+    btn_host.bind("<Enter>", lambda e: btn_host.config(bg=host_button_hover, relief='sunken'))
+    btn_host.bind("<Leave>", lambda e: btn_host.config(bg=host_button_color, relief='raised'))
+
     exit_button.bind("<Enter>", lambda e: exit_button.config(
         bg=exit_button_hover,
         relief='sunken'
