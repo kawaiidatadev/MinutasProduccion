@@ -27,12 +27,24 @@ def mostrar_tabla_acuerdos(parent, db_path):
         canvas.create_oval(2, 2, 14, 14, fill="#28a745", outline="")
         canvas.pack(side="left", padx=(0, 5))
 
-        # Texto de conexión
-        db_name = os.path.basename(db_path).rsplit(".db", 1)[0]  # Eliminar la extensión
-        if db_name == "minutas":
-            db_name = "Minutas Producción"
-        else:
-            db_name = "Minutas personales"
+
+
+        def formatear_nombre_db(db_path):
+            """Formatea el nombre de la base de datos según especificaciones"""
+            # Obtener el nombre del archivo sin extensión
+            nombre_base = os.path.basename(db_path).rsplit(".db", 1)[0]
+            # Reemplazar guiones bajos por espacios
+            nombre_formateado = nombre_base.replace("_", " ")
+            # Convertir a mayúscula cada palabra
+            nombre_formateado = nombre_formateado.title()
+            # Normalizar el texto para manejar acentos
+            nombre_formateado = unidecode(nombre_formateado)
+            nombre_final = nombre_formateado
+
+            return nombre_final
+
+        # Texto de conexión actualizado
+        db_name = formatear_nombre_db(db_path)
 
         lbl_conexion = tk.Label(
             frame_status,

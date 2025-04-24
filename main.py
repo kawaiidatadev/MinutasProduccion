@@ -17,8 +17,9 @@ def main():
     except:
         locale.setlocale(locale.LC_ALL, '')
     # Crear/verificar la base de datos
-    db_create()
+
     db_path = db_create()
+    print(db_path)
 
     # Mostrar el menú principal
     show_main_menu(db_path)

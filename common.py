@@ -85,8 +85,8 @@ from PIL import Image
 import pystray
 from plyer import notification
 import ctypes
-
-
+import re
+from unidecode import unidecode
 
 
 

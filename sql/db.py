@@ -1,11 +1,38 @@
-import sqlite3
-import os
-import getpass
-import re
-from datetime import datetime
-import tkinter as tk
-from tkinter import messagebox, simpledialog
 from rutas import DB_PATH
+from common import *
+from acuerdos.ventana_names import move_to_largest_monitor
+from sql.nombre import sanitizar_nombre
+
+
+class MasterDBManager:
+    """Clase para manejar la conexión con la base de datos maestra"""
+
+    def __init__(self):
+        self.master_db_path = r"\\mercury\Producción\Minutas Produccion\Program Files\dbs_rutas\master.db"
+        self.current_user = getpass.getuser()
+
+    def get_most_recent_db(self):
+        """Obtiene la ruta de la base de datos más reciente del usuario actual"""
+        try:
+            conn = sqlite3.connect(self.master_db_path)
+            cursor = conn.cursor()
+
+            query = """
+            SELECT direccion 
+            FROM dbs 
+            WHERE usuario_windows = ? 
+            ORDER BY fecha_de_ultimo_acceso DESC 
+            LIMIT 1
+            """
+            cursor.execute(query, (self.current_user,))
+            result = cursor.fetchone()
+
+            conn.close()
+            return result[0] if result else None
+
+        except sqlite3.Error as e:
+            print(f"Error al consultar master.db: {str(e)}")
+            return None
 
 
 class MinutasDB:
@@ -13,7 +40,10 @@ class MinutasDB:
         self.root = root
         self.current_user = getpass.getuser()
         self.db_created = False
-        self.db_path = db_path if db_path is not None else DB_PATH
+
+        master_manager = MasterDBManager()
+        most_recent_db = master_manager.get_most_recent_db()
+        self.db_path = db_path if db_path else (most_recent_db or DB_PATH)
 
         if not self.try_create_db():
             error_msg = f"No se pudo crear/acceder a la base de datos en:\n{self.db_path}"
@@ -27,10 +57,8 @@ class MinutasDB:
         """Intenta crear/verificar la base de datos en la ubicación especificada"""
         try:
             db_dir = os.path.dirname(self.db_path)
-            if not os.path.exists(db_dir):
-                os.makedirs(db_dir, exist_ok=True)
+            os.makedirs(db_dir, exist_ok=True)
 
-            # Verificar permisos de escritura
             test_file = os.path.join(db_dir, "test.tmp")
             with open(test_file, 'w') as f:
                 f.write("test")
@@ -47,67 +75,34 @@ class MinutasDB:
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS acuerdos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    id_acuerdo TEXT NOT NULL,
-                    acuerdo TEXT NOT NULL,
-                    responsables TEXT NOT NULL,
-                    fecha_compromiso TEXT NOT NULL,
-                    fecha_registro TEXT NOT NULL,
-                    usuario_registra TEXT NOT NULL,
-                    estatus TEXT NOT NULL DEFAULT 'Activo',
-                    fecha_estatus TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    comentarios_cierre TEXT DEFAULT '',
-                    comentarios TEXT DEFAULT '',
-                    accion TEXT DEFAULT 'Cerrar'
-                )
-            ''')
-
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS historial_acuerdos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    id_acuerdo TEXT NOT NULL,
-                    acuerdo TEXT NOT NULL,
-                    responsables TEXT NOT NULL,
-                    fecha_compromiso TEXT NOT NULL,
-                    fecha_modificacion TEXT NOT NULL,
-                    usuario_modifico TEXT NOT NULL,
-                    estatus TEXT NOT NULL,
-                    comentarios_cierre TEXT DEFAULT '',
-                    comentarios TEXT DEFAULT '',
-                    ruta_pdf TEXT,
-                    FOREIGN KEY (id_acuerdo) REFERENCES acuerdos(id_acuerdo)
-                )
-            ''')
-
+            from sql.querys import tabla_acuerdos, historial_acuerdos, usuarios
+            cursor.execute(tabla_acuerdos)
+            cursor.execute(historial_acuerdos)
+            cursor.execute(usuarios)
             conn.commit()
             conn.close()
+            self.update_master_db()
+
         except sqlite3.Error as e:
             raise Exception(f"Error al crear la base de datos: {e}")
 
-    def get_current_timestamp(self):
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    def agregar_acuerdo(self, id_acuerdo, acuerdo, responsables, fecha_compromiso):
-        """Agrega un nuevo acuerdo a la base de datos"""
+    def update_master_db(self):
+        """Actualiza la fecha de último acceso en master.db"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            master_manager = MasterDBManager()
+            conn = sqlite3.connect(master_manager.master_db_path)
             cursor = conn.cursor()
-            cursor.execute(
-                """INSERT INTO acuerdos 
-                (id_acuerdo, acuerdo, responsables, fecha_compromiso, fecha_registro, usuario_registra) 
-                VALUES (?, ?, ?, ?, ?, ?)""",
-                (id_acuerdo, acuerdo, responsables, fecha_compromiso,
-                 self.get_current_timestamp(), self.current_user)
-            )
+
+            update_query = """
+            UPDATE dbs 
+            SET fecha_de_ultimo_acceso = datetime('now') 
+            WHERE direccion = ?
+            """
+            cursor.execute(update_query, (self.db_path,))
             conn.commit()
             conn.close()
-            return True
         except sqlite3.Error as e:
-            print(f"Error al agregar acuerdo: {e}")
-            return False
+            print(f"Error al actualizar master.db: {str(e)}")
 
 
 def db_create():
@@ -124,95 +119,232 @@ def db_create():
         return str(e)
 
 
-def sanitizar_nombre(nombre):
-    """Limpia caracteres inválidos para nombres de archivo"""
-    nombre = re.sub(r'[\\/*?:"<>|]', '_', nombre)
-    nombre = nombre.replace(' ', '_').strip()
-    return nombre[:50]
-
-
-def generar_nombre_minuta(objetivo, asuntos, responsables):
-    """Genera un nombre de archivo único basado en el contenido"""
-
-    def procesar_campo(texto, max_palabras=3, max_caracteres=15):
-        palabras = texto.split()[:max_palabras]
-        return ''.join([p[:3] for p in palabras])[:max_caracteres]
-
-    objetivo_limpio = procesar_campo(objetivo) or "Obj"
-    asuntos_limpio = procesar_campo(asuntos) or "Asuntos"
-    responsables_limpio = procesar_campo(responsables) or "Responsables"
-
-    nombre_base = f"{sanitizar_nombre(objetivo_limpio)}_{sanitizar_nombre(asuntos_limpio)}_{sanitizar_nombre(responsables_limpio)}"
-    return nombre_base + ".db"
-
-
 def crear_nueva_minuta():
-    """Interfaz para crear nueva minuta con campos personalizados"""
+    """Interfaz moderna para crear nueva minuta"""
     ventana = tk.Toplevel()
-    ventana.title("Nueva Minuta de Producción")
-    ventana.geometry("600x300")
+    ventana.title("Nueva Minuta")
+    ventana.configure(bg='#f5f5f5')
+    move_to_largest_monitor(ventana)
 
-    # Configuración de grid
-    ventana.columnconfigure(1, weight=1)
-    pad_options = {'padx': 5, 'pady': 5, 'sticky': tk.EW}
+    # Primero definimos todas las funciones internas
+    def actualizar_ui(event=None):
+        """Actualiza la interfaz en tiempo real"""
+        for entry, help_text, counter, max_len in entries:
+            texto = entry.get()
+            length = len(texto)
 
-    # Campos del formulario
-    tk.Label(ventana, text="Objetivo de la reunión:").grid(row=0, column=0, **pad_options)
-    objetivo_entry = tk.Entry(ventana, width=60)
-    objetivo_entry.grid(row=0, column=1, **pad_options)
+            # Actualizar contador
+            counter.config(text=f"{length}/{max_len}",
+                         fg='#e74c3c' if length > max_len else '#999999')
 
-    tk.Label(ventana, text="Asuntos principales a tratar:").grid(row=1, column=0, **pad_options)
-    asuntos_entry = tk.Entry(ventana, width=60)
-    asuntos_entry.grid(row=1, column=1, **pad_options)
+            # Cambiar color del borde si hay error
+            entry.config(highlightcolor='#e74c3c' if length > max_len else '#3498db')
 
-    tk.Label(ventana, text="Responsable(s) general(es):").grid(row=2, column=0, **pad_options)
-    responsables_entry = tk.Entry(ventana, width=60)
-    responsables_entry.grid(row=2, column=1, **pad_options)
+            # Ocultar placeholder si hay texto
+            help_text.config(fg='#ffffff' if texto else '#999999')
+
+    def validar_campos():
+        """Valida todos los campos del formulario"""
+        errors = []
+        nombre = entries[0][0].get().strip()
+        objetivo = entries[1][0].get().strip()
+        asuntos = entries[2][0].get().strip()
+
+        if not nombre:
+            errors.append("El nombre de la minuta es obligatorio")
+        if len(nombre) > 30:
+            errors.append("El nombre no puede exceder 30 caracteres")
+        if len(objetivo) > 50:
+            errors.append("El objetivo no puede exceder 50 caracteres")
+        if len(asuntos) > 50:
+            errors.append("Los asuntos no pueden exceder 50 caracteres")
+
+        if errors:
+            messagebox.showerror("Errores en el formulario", "\n".join(errors))
+            return False
+        return True
+
+    def registrar_nueva_db_en_master(ruta, nombre, objetivo, asuntos):
+        """Registra en la base de datos maestra"""
+        try:
+            master_manager = MasterDBManager()
+            conn = sqlite3.connect(master_manager.master_db_path)
+            cursor = conn.cursor()
+
+            insert_query = """
+            INSERT INTO dbs (
+                usuario_windows, db_name, objetivo, asuntos, 
+                fecha_creacion, estatus, direccion, fecha_de_ultimo_acceso
+            ) VALUES (?, ?, ?, ?, datetime('now'), ?, ?, datetime('now'))
+            """
+
+            cursor.execute(insert_query, (
+                master_manager.current_user,
+                nombre,
+                objetivo,
+                asuntos,
+                "Activa",
+                ruta
+            ))
+
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            print(f"Error al registrar en master.db: {str(e)}")
 
     def crear_minuta():
-        # Validar campos obligatorios
-        if not all([objetivo_entry.get(), asuntos_entry.get(), responsables_entry.get()]):
-            messagebox.showerror("Error", "Todos los campos son obligatorios")
+        """Procesa la creación de la minuta"""
+        if not validar_campos():
             return
 
-        # Generar estructura de directorios
+        nombre_minuta = sanitizar_nombre(entries[0][0].get())
+        objetivo = entries[1][0].get().strip()
+        asuntos = entries[2][0].get().strip()
+
         usuario = getpass.getuser()
         directorio_base = fr"\\mercury\Producción\Minutas Produccion\Program Files\{usuario}"
 
         try:
             os.makedirs(directorio_base, exist_ok=True)
         except OSError as e:
-            messagebox.showerror("Error", f"No se pudo crear el directorio: {str(e)}")
+            messagebox.showerror("Error", f"No se pudo crear el directorio:\n{str(e)}")
             return
 
-        # Generar nombre de archivo único
-        nombre_db = generar_nombre_minuta(
-            objetivo_entry.get(),
-            asuntos_entry.get(),
-            responsables_entry.get()
-        )
+        if not nombre_minuta.lower().endswith('.db'):
+            nombre_minuta += ".db"
 
-        # Verificar y hacer único el nombre
-        contador = 1
-        nombre_base, extension = os.path.splitext(nombre_db)
-        ruta_completa = os.path.join(directorio_base, nombre_db)
-        while os.path.exists(ruta_completa):
-            nombre_db = f"{nombre_base}_{contador}{extension}"
-            ruta_completa = os.path.join(directorio_base, nombre_db)
-            contador += 1
+        ruta_completa = os.path.join(directorio_base, nombre_minuta)
 
-        # Crear la base de datos
+        if os.path.exists(ruta_completa):
+            messagebox.showerror("Error", "Ya existe una minuta con ese nombre.\nPor favor use un nombre diferente.")
+            return
+
         try:
             MinutasDB(db_path=ruta_completa)
-            messagebox.showinfo("Éxito", f"Minuta creada exitosamente en:\n{ruta_completa}")
-            ventana.destroy()
-            return ruta_completa
-        except Exception as e:
-            messagebox.showerror("Error", f"No se pudo crear la minuta: {str(e)}")
-            return None
+            registrar_nueva_db_en_master(ruta_completa, nombre_minuta, objetivo, asuntos)
 
-    # Botón de acción
-    btn_crear = tk.Button(ventana, text="Crear Minuta", command=crear_minuta, bg="#4CAF50", fg="white")
-    btn_crear.grid(row=3, column=1, **pad_options)
+            # Mensaje de éxito
+            success_window = tk.Toplevel(ventana)
+            success_window.title("Minuta creada")
+            move_to_largest_monitor(success_window)
+            success_window.grab_set()
+
+            success_window.configure(bg='#ffffff')
+            success_window.resizable(False, False)
+
+            # Contenido del mensaje de éxito
+            success_content = tk.Frame(success_window, bg='#ffffff', padx=30, pady=20)
+            success_content.pack()
+
+            tk.Label(success_content, text="✓", font=('Helvetica', 24, 'bold'),
+                    fg='#2ecc71', bg='#ffffff').pack(pady=(0, 10))
+            tk.Label(success_content, text="Minuta creada exitosamente",
+                    font=('Helvetica', 12), bg='#ffffff').pack()
+            tk.Label(success_content, text=ruta_completa, font=('Helvetica', 9),
+                    fg='#555555', bg='#ffffff').pack(pady=(5, 15))
+
+            tk.Button(success_content, text="Aceptar",
+                     command=lambda: [success_window.destroy(), ventana.destroy()],
+                     bg='#2ecc71', fg='white', bd=0, padx=20, pady=5,
+                     activebackground='#27ae60').pack()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo crear la minuta:\n{str(e)}")
+
+    # Ahora creamos la interfaz gráfica
+    # Frame principal con padding consistente
+    main_frame = tk.Frame(ventana, bg='#ffffff', padx=30, pady=25)
+    main_frame.pack(expand=True, fill=tk.BOTH)
+
+    # Título centrado con espacio adecuado
+    tk.Label(main_frame, text="Crear Nueva Minuta",
+            font=('Helvetica', 16, 'bold'), bg='#ffffff', fg='#333333'
+            ).pack(pady=(0, 25))
+
+    # Frame para los campos del formulario
+    form_frame = tk.Frame(main_frame, bg='#ffffff')
+    form_frame.pack(fill=tk.X, padx=10)
+
+    # Estilos reutilizables
+    campo_style = {
+        'font': ('Helvetica', 10),
+        'bg': '#ffffff',
+        'bd': 1,
+        'relief': tk.SOLID,
+        'highlightthickness': 1,
+        'highlightcolor': '#3498db',
+        'highlightbackground': '#dddddd'
+    }
+    label_style = {
+        'font': ('Helvetica', 10, 'bold'),
+        'bg': '#ffffff',
+        'fg': '#555555'
+    }
+    help_style = {
+        'font': ('Helvetica', 8),
+        'bg': '#ffffff',
+        'fg': '#999999'
+    }
+
+    # Campos del formulario
+    campos = [
+        ("Nombre de la minuta", 30, "Ej: Reunión Semanal - Proyecto X"),
+        ("Objetivo principal", 50, "Ej: Revisar avances del sprint actual"),
+        ("Asuntos a tratar", 50, "Ej: 1. Problemas técnicos, 2. Planificación")
+    ]
+
+    entries = []
+    for label, max_len, placeholder in campos:
+        # Frame para cada campo
+        field_frame = tk.Frame(form_frame, bg='#ffffff')
+        field_frame.pack(fill=tk.X, pady=8)
+
+        # Label
+        tk.Label(field_frame, text=f"{label} (máx. {max_len} chars):",
+                **label_style).pack(anchor=tk.W)
+
+        # Entry
+        entry = tk.Entry(field_frame, width=50, **campo_style)
+        entry.pack(fill=tk.X, pady=2)
+
+        # Frame para ayuda y contador
+        bottom_frame = tk.Frame(field_frame, bg='#ffffff')
+        bottom_frame.pack(fill=tk.X)
+
+        # Texto de ayuda
+        help_text = tk.Label(bottom_frame, text=placeholder, **help_style)
+        help_text.pack(side=tk.LEFT)
+
+        # Contador de caracteres
+        counter = tk.Label(bottom_frame, text=f"0/{max_len}", **help_style)
+        counter.pack(side=tk.RIGHT)
+
+        entries.append((entry, help_text, counter, max_len))
+
+    # Frame para el botón de acción
+    button_frame = tk.Frame(main_frame, bg='#ffffff')
+    button_frame.pack(fill=tk.X, pady=(20, 0), padx=10)
+
+    # Botón de creación con estilo moderno
+    btn_crear = tk.Button(
+        button_frame,
+        text="CREAR MINUTA",
+        command=crear_minuta,
+        bg='#3498db',
+        fg='white',
+        font=('Helvetica', 10, 'bold'),
+        bd=0,
+        padx=30,
+        pady=8,
+        cursor='hand2',
+        activebackground='#2980b9'
+    )
+    btn_crear.pack(side=tk.RIGHT)
+
+    # Configurar eventos
+    for entry, *_ in entries:
+        entry.bind('<KeyRelease>', actualizar_ui)
+        entry.bind('<FocusIn>', lambda e: actualizar_ui())
+        entry.bind('<FocusOut>', lambda e: actualizar_ui())
 
     ventana.mainloop()
