@@ -124,7 +124,7 @@ def apply_scaling(root, scale_factor):
         logger.critical(f"Error crítico en apply_scaling: {e}")
         return {}
 
-
+from gestion_masters import host
 
 def show_main_menu(db_path):
     """Función principal con autoajuste para HiDPI"""  # <-- 4 espacios
@@ -523,6 +523,10 @@ def show_main_menu(db_path):
     new_button_color = '#4CAF50'  # Verde
     new_button_hover = '#45a049'  # Verde oscuro
 
+    # Definir color para el botón Host (puedes ajustar estos valores)
+    host_button_color = '#2196F3'  # Azul
+    host_button_hover = '#0b7dda'  # Azul oscuro
+
     # Botón de Acuerdos Interactivos (mejorado)
     btn_interactivos = tk.Button(
         buttons_container,
@@ -550,6 +554,20 @@ def show_main_menu(db_path):
         **button_style
     )
     btn_minuta.pack(side='left', expand=True, padx=10)
+
+    # Nuevo botón Host
+    btn_host = tk.Button(
+        buttons_container,
+        text="HOST",
+        command=host,
+        bg=host_button_color,
+        fg=text_color,
+        activebackground=host_button_hover,
+        relief='raised',
+        width=15,
+        **button_style
+    )
+    btn_host.pack(side='left', expand=True, padx=10)
 
     # Botón de Salir (mejorado)
     exit_button = tk.Button(
