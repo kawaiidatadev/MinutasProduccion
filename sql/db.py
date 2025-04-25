@@ -10,40 +10,109 @@ class MasterDBManager:
     def __init__(self):
         self.master_db_path = r"\\mercury\Producción\Minutas Produccion\Program Files\dbs_rutas\master.db"
         self.current_user = getpass.getuser()
+        self.ensure_master_table()  # Crear tabla si no existe
+
+    def user_exists(self):
+        try:
+            conn = sqlite3.connect(self.master_db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM dbs WHERE usuario_windows = ? LIMIT 1", (self.current_user,))
+            return cursor.fetchone() is not None
+        except sqlite3.Error as e:
+            print(f"Error checking if user exists: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def get_default_db(self):
+        try:
+            conn = sqlite3.connect(self.master_db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT direccion FROM dbs WHERE db_name = 'Default' LIMIT 1")
+            result = cursor.fetchone()
+            return result[0] if result else None
+        except sqlite3.Error as e:
+            print(f"Error retrieving default DB: {e}")
+            return None
+        finally:
+            conn.close()
+
+    def ensure_master_table(self):
+        """Crea la estructura de la tabla maestra si no existe"""
+        try:
+            conn = sqlite3.connect(self.master_db_path)
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS dbs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_windows TEXT NOT NULL,
+                    db_name TEXT NOT NULL UNIQUE,
+                    objetivo TEXT,
+                    asuntos TEXT,
+                    fecha_creacion DATETIME,
+                    estatus TEXT DEFAULT 'Activa',
+                    direccion TEXT UNIQUE,
+                    fecha_de_ultimo_acceso DATETIME
+                )
+            """)
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            print(f"Error al crear tabla maestra: {str(e)}")
+            raise
 
     def get_most_recent_db(self):
         """Obtiene la ruta de la base de datos más reciente del usuario actual"""
         try:
             conn = sqlite3.connect(self.master_db_path)
             cursor = conn.cursor()
-
-            query = """
-            SELECT direccion 
-            FROM dbs 
-            WHERE usuario_windows = ? 
-            ORDER BY fecha_de_ultimo_acceso DESC 
-            LIMIT 1
-            """
-            cursor.execute(query, (self.current_user,))
+            cursor.execute("""
+                SELECT direccion 
+                FROM dbs 
+                WHERE usuario_windows = ? 
+                ORDER BY fecha_de_ultimo_acceso DESC 
+                LIMIT 1
+            """, (self.current_user,))
             result = cursor.fetchone()
-
-            conn.close()
             return result[0] if result else None
-
         except sqlite3.Error as e:
             print(f"Error al consultar master.db: {str(e)}")
             return None
+        finally:
+            conn.close()
 
 
 class MinutasDB:
-    def __init__(self, root=None, db_path=None):
+    def __init__(self, root=None, db_path=None, is_default=True):  # Nuevo parámetro
         self.root = root
         self.current_user = getpass.getuser()
         self.db_created = False
+        self.is_default = is_default  # Nuevo atributo
 
         master_manager = MasterDBManager()
-        most_recent_db = master_manager.get_most_recent_db()
-        self.db_path = db_path if db_path else (most_recent_db or DB_PATH)
+        # Paso 1: Verificar si el usuario actual existe en la tabla dbs
+        if not master_manager.user_exists():
+            # Paso 2: Obtener la DB por defecto
+            default_db_path = master_manager.get_default_db()
+
+            if default_db_path:
+                self.db_path = default_db_path
+                self.is_default = True  # Flag opcional para saber que se usó la default
+            else:
+                raise Exception("No se encontró la base de datos predeterminada 'Default'.")
+        else:
+            # El usuario existe, obtener su DB más reciente
+            most_recent_db = master_manager.get_most_recent_db()
+
+            if most_recent_db:
+                self.db_path = most_recent_db
+                self.is_default = False
+            else:
+                # Usuario existe pero no tiene DBs aún. Se genera una nueva.
+                default_dir = fr"\\mercury\Producción\Minutas Produccion\Program Files\{self.current_user}"
+                self.db_path = self.generate_unique_db_path(default_dir)
+                self.is_default = False
+
 
         if not self.try_create_db():
             error_msg = f"No se pudo crear/acceder a la base de datos en:\n{self.db_path}"
@@ -53,19 +122,40 @@ class MinutasDB:
                 print(error_msg)
             raise Exception(error_msg)
 
+    def generate_unique_db_path(self, directory):
+        """Genera una ruta única para la base de datos"""
+        base_name = "minuta_principal"
+        counter = 1
+        while True:
+            new_name = f"{base_name}_{datetime.now().strftime('%Y%m%d')}_{counter}.db"
+            full_path = os.path.join(directory, new_name)
+            if not os.path.exists(full_path):
+                return full_path
+            counter += 1
+
     def try_create_db(self):
         """Intenta crear/verificar la base de datos en la ubicación especificada"""
         try:
             db_dir = os.path.dirname(self.db_path)
-            os.makedirs(db_dir, exist_ok=True)
 
-            test_file = os.path.join(db_dir, "test.tmp")
-            with open(test_file, 'w') as f:
-                f.write("test")
-            os.remove(test_file)
+            # Crear directorio si no existe
+            if not os.path.exists(db_dir):
+                os.makedirs(db_dir, exist_ok=True)
 
-            self.create_database()
+            # Verificar permisos de escritura
+            if not os.access(db_dir, os.W_OK):
+                raise PermissionError(f"No hay permisos de escritura en: {db_dir}")
+
+            # Crear DB si no existe
+            if not os.path.exists(self.db_path):
+                self.create_database()
+
+            # Verificar integridad de la DB
+            with sqlite3.connect(self.db_path) as test_conn:
+                test_conn.execute("SELECT name FROM sqlite_master WHERE type='table';")
+
             return True
+
         except Exception as e:
             print(f"Error en try_create_db: {str(e)}")
             return False
@@ -81,29 +171,60 @@ class MinutasDB:
             cursor.execute(usuarios)
             conn.commit()
             conn.close()
-            self.update_master_db()
+            if self.is_default:
+                self.update_master_db()
 
         except sqlite3.Error as e:
             raise Exception(f"Error al crear la base de datos: {e}")
 
     def update_master_db(self):
-        """Actualiza la fecha de último acceso en master.db"""
+        """Actualiza o inserta la entrada en master.db"""
         try:
+            if not self.is_default:
+                return  # No registrar si no es default
             master_manager = MasterDBManager()
             conn = sqlite3.connect(master_manager.master_db_path)
             cursor = conn.cursor()
 
-            update_query = """
-            UPDATE dbs 
-            SET fecha_de_ultimo_acceso = datetime('now') 
-            WHERE direccion = ?
-            """
-            cursor.execute(update_query, (self.db_path,))
+            # Verificar si ya existe el registro
+            cursor.execute("SELECT id FROM dbs WHERE direccion = ?", (self.db_path,))
+            exists = cursor.fetchone()
+
+            if exists:
+                update_query = """
+                UPDATE dbs 
+                SET fecha_de_ultimo_acceso = datetime('now') 
+                WHERE direccion = ?
+                """
+                cursor.execute(update_query, (self.db_path,))
+            else:
+                insert_query = """
+                INSERT INTO dbs (
+                    usuario_windows, 
+                    db_name, 
+                    objetivo, 
+                    asuntos, 
+                    fecha_creacion, 
+                    estatus, 
+                    direccion, 
+                    fecha_de_ultimo_acceso
+                ) VALUES (?, ?, ?, ?, datetime('now'), ?, ?, datetime('now'))
+                """
+                db_name = os.path.basename(self.db_path)
+                cursor.execute(insert_query, (
+                    self.current_user,
+                    db_name,
+                    "Minuta principal",
+                    "Seguimiento de acuerdos generales",
+                    "Activa",
+                    self.db_path
+                ))
+
             conn.commit()
             conn.close()
         except sqlite3.Error as e:
-            print(f"Error al actualizar master.db: {str(e)}")
-
+            print(f"Error al actualizar/insertar en master.db: {str(e)}")
+            raise
 
 def db_create():
     """Función original que crea/verifica la base de datos principal"""
