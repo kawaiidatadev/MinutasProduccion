@@ -15,9 +15,7 @@ def host(db_path):
         cursor.execute("SELECT COUNT(*) FROM dbs WHERE usuario_windows = ?", (usuario_actual,))
         if cursor.fetchone()[0] == 0:
             # Si no es propietario, usar la base de datos "Master" para pruebas
-            respuesta = messagebox.askyesno("Información",
-                                            "No eres propietario de ninguna base de datos registrada.\n"
-                                            "¿Deseas usar la base de datos de prueba 'Master'?")
+            respuesta = True
 
             if respuesta:
                 usuario_actual = "Master"
@@ -88,7 +86,7 @@ def host(db_path):
                 """, (fecha_respuesta, solicitud_id))
                 conn.commit()
                 cargar_solicitudes()
-                messagebox.showinfo("Éxito", "Solicitud aprobada correctamente.")
+
 
         def rechazar_solicitud():
             """Rechazar la solicitud seleccionada"""
@@ -102,7 +100,7 @@ def host(db_path):
                 """, (solicitud_id,))
                 conn.commit()
                 cargar_solicitudes()
-                messagebox.showinfo("Éxito", "Solicitud rechazada correctamente.")
+
 
         # Botones de acción
         ttk.Button(btn_frame, text="Aprobar", command=aprobar_solicitud).grid(row=0, column=0, padx=5)
@@ -114,7 +112,8 @@ def host(db_path):
         notebook.add(hosts_frame, text="Mis Hosts")
 
         # Treeview para hosts del usuario
-        hosts_tree = ttk.Treeview(hosts_frame, columns=('db_name', 'fecha_acceso', 'objetivo', 'asuntos'), show='headings')
+        hosts_tree = ttk.Treeview(hosts_frame, columns=('db_name', 'fecha_acceso', 'objetivo', 'asuntos'),
+                                  show='headings')
         hosts_tree.heading('db_name', text="Base de Datos", anchor=tk.W)
         hosts_tree.heading('fecha_acceso', text="Último Acceso", anchor=tk.W)
         hosts_tree.heading('objetivo', text="objetivo", anchor=tk.W)
@@ -128,13 +127,78 @@ def host(db_path):
 
         hosts_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        # Menú contextual para hosts
+        menu_hosts = tk.Menu(hosts_tree, tearoff=0)
+        menu_hosts.add_command(label="Eliminar", command=lambda: eliminar_host())
+
+        def mostrar_menu_hosts(event):
+            """Muestra el menú contextual al hacer clic derecho"""
+            item = hosts_tree.identify_row(event.y)
+            if item:
+                hosts_tree.selection_set(item)
+                menu_hosts.post(event.x_root, event.y_root)
+
+        hosts_tree.bind("<Button-3>", mostrar_menu_hosts)
+
+        # En la función eliminar_host() actualiza la consulta SQL:
+        def eliminar_host():
+            """Elimina el host seleccionado después de confirmación"""
+            item_seleccionado = hosts_tree.selection()
+            if not item_seleccionado:
+                return
+
+            datos_host = hosts_tree.item(item_seleccionado)['values']
+            db_name = datos_host[0]
+
+            respuesta = messagebox.askyesno(
+                "Confirmar eliminación",
+                f"¿Estás seguro que deseas marcar como eliminada la base de datos:\n\n{db_name}?",
+                parent=hosts_frame
+            )
+
+            if respuesta:
+                try:
+                    # Ejecutar con parámetros seguros
+                    cursor.execute("""
+                        UPDATE dbs
+                        SET estatus = 'Eliminada'
+                        WHERE db_name COLLATE NOCASE = ?
+                        AND usuario_windows COLLATE NOCASE = ?
+
+                    """, (db_name, usuario_actual))
+
+                    conn.commit()
+
+                    if cursor.rowcount > 0:
+                        messagebox.showinfo("Éxito",
+                                            f"La base de datos {db_name} ha sido marcada como eliminada.",
+                                            parent=hosts_frame
+                                            )
+                        cargar_hosts()
+                    else:
+                        messagebox.showwarning(
+                            "No se pudo eliminar",
+                            "No se encontró la base de datos o no cumple con los requisitos para eliminación.\n\n"
+                            "Posibles causas:\n"
+                            "- La base está actualmente Activa\n"
+                            "- No eres el propietario registrado\n"
+                            "- Ya fue eliminada previamente",
+                            parent=hosts_frame
+                        )
+                except Exception as e:
+                    messagebox.showerror(
+                        "Error",
+                        f"Error al eliminar:\n{str(e)}",
+                        parent=hosts_frame
+                    )
+
         def cargar_hosts():
             """Cargar los hosts del usuario"""
             hosts_tree.delete(*hosts_tree.get_children())
             cursor.execute("""
                 SELECT db_name, fecha_de_ultimo_acceso, objetivo, asuntos
                 FROM dbs
-                WHERE usuario_windows = ?
+                WHERE usuario_windows = ? AND estatus == 'Activa'
                 ORDER BY fecha_de_ultimo_acceso DESC
             """, (usuario_actual,))
 
@@ -147,7 +211,8 @@ def host(db_path):
             if seleccion:
                 direccion = hosts_tree.item(seleccion[0])['values'][2]
                 messagebox.showinfo("Conectar", f"Conectando a: {direccion}")
-                # Aquí iría la lógica real de conexión
+
+
 
         # Botón de conectar
         ttk.Button(hosts_frame, text="Conectar", command=conectar_host).pack(pady=10)
@@ -174,6 +239,166 @@ def host(db_path):
         menu_contextual = Menu(compartidos_tree, tearoff=0)
         menu_contextual.add_command(label="Retirar permiso", command=lambda: retirar_permiso())
 
+        # Pestaña 4: Otros Host
+        otros_hosts_frame = ttk.Frame(notebook)
+        notebook.add(otros_hosts_frame, text="Otros Host")
+
+        # Treeview para otros hosts con columna adicional para el estado
+        otros_hosts_tree = ttk.Treeview(otros_hosts_frame,
+                                        columns=('db_name', 'usuario_windows', 'objetivo', 'asuntos', 'fecha_creacion',
+                                                 'estado'),
+                                        show='headings')
+        otros_hosts_tree.heading('db_name', text="Base de Datos", anchor=tk.W)
+        otros_hosts_tree.heading('usuario_windows', text="Propietario", anchor=tk.W)
+        otros_hosts_tree.heading('objetivo', text="Objetivo", anchor=tk.W)
+        otros_hosts_tree.heading('asuntos', text="Asuntos", anchor=tk.W)
+        otros_hosts_tree.heading('fecha_creacion', text="Fecha Creación", anchor=tk.W)
+        otros_hosts_tree.heading('estado', text="Estado", anchor=tk.W)
+
+        # Configurar columnas
+        otros_hosts_tree.column('db_name', width=200)
+        otros_hosts_tree.column('usuario_windows', width=150)
+        otros_hosts_tree.column('objetivo', width=300)
+        otros_hosts_tree.column('asuntos', width=400)
+        otros_hosts_tree.column('fecha_creacion', width=150)
+        otros_hosts_tree.column('estado', width=120)
+
+        # Configurar estilos para diferentes estados
+        otros_hosts_tree.tag_configure('pendiente', foreground='orange')
+        otros_hosts_tree.tag_configure('aprobado', foreground='green')
+        otros_hosts_tree.tag_configure('rechazado', foreground='red')
+        otros_hosts_tree.tag_configure('disponible', foreground='blue')
+
+        otros_hosts_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Botón de solicitar permiso
+        btn_solicitar = ttk.Button(otros_hosts_frame, text="Solicitar permiso", state=tk.DISABLED)
+        btn_solicitar.pack(pady=10)
+
+        def cargar_otros_hosts():
+            """Cargar otros hosts disponibles con su estado actual"""
+            otros_hosts_tree.delete(*otros_hosts_tree.get_children())
+
+            cursor.execute("""
+                SELECT 
+                    d.db_name, 
+                    d.usuario_windows, 
+                    d.objetivo, 
+                    d.asuntos, 
+                    d.fecha_creacion, 
+                    d.id,
+                    CASE 
+                        WHEN EXISTS (
+                            SELECT 1 FROM solicitudes_acceso 
+                            WHERE db_id = d.id 
+                            AND usuario_solicitante = ? 
+                            AND estatus = 'pendiente'
+                        ) THEN 'Pendiente'
+                        WHEN EXISTS (
+                            SELECT 1 FROM solicitudes_acceso 
+                            WHERE db_id = d.id 
+                            AND usuario_solicitante = ? 
+                            AND estatus = 'aprobado'
+                        ) THEN 'Aprobado'
+                        WHEN EXISTS (
+                            SELECT 1 FROM solicitudes_acceso 
+                            WHERE db_id = d.id 
+                            AND usuario_solicitante = ? 
+                            AND estatus = 'rechazado'
+                        ) THEN 'Rechazado'
+                        ELSE 'Disponible'
+                    END as estado
+                FROM dbs d
+                WHERE d.estatus = 'Activa' 
+                AND usuario_windows != 'Master'
+                AND d.usuario_windows COLLATE NOCASE != ?
+            """, (usuario_actual, usuario_actual, usuario_actual, usuario_actual))
+
+            for db in cursor.fetchall():
+                db_id = db[5]
+                estado = db[6].lower()  # Convertir a minúsculas para los tags
+
+                # Mostrar estado con formato
+                estado_mostrar = {
+                    'pendiente': '🟠 Pendiente',
+                    'aprobado': '🟢 Aprobado',
+                    'rechazado': '🔴 Rechazado',
+                    'disponible': '🔵 Disponible'
+                }.get(estado, estado)
+
+                otros_hosts_tree.insert(
+                    '', tk.END,
+                    values=db[:5] + (estado_mostrar,),
+                    iid=db_id,
+                    tags=(estado,)
+                )
+
+        def on_select_otros_hosts(event):
+            """Manejar selección de filas"""
+            seleccion = otros_hosts_tree.selection()
+            if seleccion:
+                item = seleccion[0]
+                estado = otros_hosts_tree.item(item, 'tags')[0]  # Obtener el tag de estado
+
+                # Solo permitir solicitar si está disponible o fue rechazada
+                if estado in ['disponible', 'rechazado']:
+                    btn_solicitar.config(state=tk.NORMAL)
+                else:
+                    otros_hosts_tree.selection_remove(item)
+                    btn_solicitar.config(state=tk.DISABLED)
+                    if estado == 'pendiente':
+                        messagebox.showinfo("Información",
+                                            "Ya tiene una solicitud pendiente para esta base de datos",
+                                            parent=otros_hosts_frame)
+                    elif estado == 'aprobado':
+                        messagebox.showinfo("Información",
+                                            "Ya tiene acceso aprobado a esta base de datos",
+                                            parent=otros_hosts_frame)
+            else:
+                btn_solicitar.config(state=tk.DISABLED)
+
+        def solicitar_acceso():
+            """Crear solicitud de acceso"""
+            seleccion = otros_hosts_tree.selection()
+            if not seleccion:
+                return
+
+            db_id = seleccion[0]
+            db_name = otros_hosts_tree.item(seleccion[0], 'values')[0]
+
+            try:
+                # Insertar nueva solicitud
+                cursor.execute("""
+                    INSERT INTO solicitudes_acceso 
+                    (db_id, usuario_solicitante, fecha_solicitud, estatus)
+                    VALUES (?, ?, ?, 'pendiente')
+                """, (db_id, usuario_actual, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+
+                conn.commit()
+                messagebox.showinfo("Éxito",
+                                    f"Solicitud enviada para: {db_name}",
+                                    parent=otros_hosts_frame)
+
+                # Actualizar la vista
+                cargar_otros_hosts()
+                btn_solicitar.config(state=tk.DISABLED)
+
+            except sqlite3.IntegrityError:
+                messagebox.showwarning("Advertencia",
+                                       "Ya existe una solicitud para esta base de datos",
+                                       parent=otros_hosts_frame)
+            except Exception as e:
+                messagebox.showerror("Error",
+                                     f"Error al enviar solicitud:\n{str(e)}",
+                                     parent=otros_hosts_frame)
+
+        # Configurar eventos
+        btn_solicitar.config(command=solicitar_acceso)
+        otros_hosts_tree.bind('<<TreeviewSelect>>', on_select_otros_hosts)
+
+        # Cargar datos iniciales
+        cargar_otros_hosts()
+
         def cargar_hosts_compartidos():
             """Cargar los hosts compartidos"""
             compartidos_tree.delete(*compartidos_tree.get_children())
@@ -183,6 +408,7 @@ def host(db_path):
                        JOIN dbs d ON s.db_id = d.id
                        WHERE s.estatus = 'aprobado'
                        AND d.usuario_windows = ?
+                       AND d.estatus = 'Activa'
                        ORDER BY s.fecha_respuesta DESC
                    """, (usuario_actual,))
 
@@ -217,7 +443,7 @@ def host(db_path):
                        """, (db_name, usuario))
                 conn.commit()
                 cargar_hosts_compartidos()
-                messagebox.showinfo("Éxito", "Permiso retirado correctamente.")
+
 
         # Vincular evento de clic derecho
         compartidos_tree.bind("<Button-3>", mostrar_menu_contextual)
