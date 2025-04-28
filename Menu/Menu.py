@@ -124,11 +124,19 @@ def apply_scaling(root, scale_factor):
         logger.critical(f"Error crítico en apply_scaling: {e}")
         return {}
 
-from gestion_masters import host
 
 def show_main_menu(db_path):
     """Función principal con autoajuste para HiDPI"""  # <-- 4 espacios
-    root = tk.Tk()  # <-- Ahora también con 4 espacios
+    root = tk.Tk() if not tk._default_root else tk._default_root
+
+    # Limpiar si ya existe contenido
+    if hasattr(root, '_initialized'):
+        for widget in root.winfo_children():
+            widget.destroy()
+    else:
+        root._initialized = True
+        from acuerdos.ventana_names import move_to_largest_monitor
+        move_to_largest_monitor(root)
 
     #bloquear_ventana_robusta(root)
     from acuerdos.ventana_names import move_to_largest_monitor
@@ -379,6 +387,8 @@ def show_main_menu(db_path):
         from acuerdos.interacciones import word_acuerdos
         word_acuerdos(root, db_path)
 
+
+
     # Función al cerrar
     def on_close():
         root.destroy()
@@ -555,19 +565,55 @@ def show_main_menu(db_path):
     )
     btn_minuta.pack(side='left', expand=True, padx=10)
 
-    # Nuevo botón Host
+    from gestion_masters import host, get_pending_requests_count  # Nueva función
+
+    # Primero creamos una función auxiliar para obtener el conteo
+    def get_pending_count(db_path):
+        try:
+            return get_pending_requests_count(db_path)
+        except:
+            return 0
+
+
+    # Luego modificamos el botón Host
+    pending_count = get_pending_count(db_path)
+
     btn_host = tk.Button(
         buttons_container,
-        text="HOST",
-        command=host,
+        text=f"HOST  {'•' if pending_count > 0 else ''}",
+        command=lambda: host(db_path),
         bg=host_button_color,
         fg=text_color,
         activebackground=host_button_hover,
         relief='raised',
         width=15,
-        **button_style
+        font=('Helvetica', 11, 'bold'),
+        height=2,
+        borderwidth=3,
+        highlightthickness=0,
+        cursor='hand2',
+        activeforeground=text_color,
+        compound='right'
     )
     btn_host.pack(side='left', expand=True, padx=10)
+
+    # Añadir un badge pequeño si hay solicitudes pendientes
+    if pending_count > 0:
+        badge = tk.Label(buttons_container,
+                         text=str(pending_count),
+                         bg='#FF6B6B',  # Rojo suave
+                         fg='white',
+                         font=('Helvetica', 8),
+                         bd=0,
+                         padx=4,
+                         pady=1)
+        badge.place(in_=btn_host,
+                    relx=1.0,
+                    rely=0.0,
+                    anchor='ne',
+                    x=-5,
+                    y=5)
+
 
     # Botón de Salir (mejorado)
     exit_button = tk.Button(
