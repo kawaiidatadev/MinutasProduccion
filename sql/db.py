@@ -263,6 +263,8 @@ def crear_nueva_minuta():
     ventana.title("Nueva Minuta")
     ventana.configure(bg='#f5f5f5')
     move_to_largest_monitor(ventana)
+    ventana.transient()  # Se coloca encima de la ventana principal
+    ventana.attributes('-topmost', True)  # Siempre arriba
 
 
     # Primero definimos todas las funciones internas
@@ -310,6 +312,10 @@ def crear_nueva_minuta():
             conn = sqlite3.connect(master_manager.master_db_path)
             cursor = conn.cursor()
 
+            # Guardamos el nombre sin extensión para db_name
+            if nombre.lower().endswith('.db'):
+                nombre = nombre[:-3]
+            print(f'NOMBRE LIMPIO: {nombre}')
             insert_query = """
             INSERT INTO dbs (
                 usuario_windows, db_name, objetivo, asuntos, 
