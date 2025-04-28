@@ -236,6 +236,7 @@ def registrar_acuerdo(parent_window, db_path):
             new_resp_var.set("")
 
         except Exception as e:
+            print(db_path)
             messagebox.showerror("Error", f"No se pudo agregar el responsable: {e}")
 
     tk.Button(

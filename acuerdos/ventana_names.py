@@ -52,7 +52,7 @@ class WindowManager:
         if self._initialized:
             return
         self._initialized = True
-        self.special_windows_titles = ["Gestión de Acuerdos", "Registrar Nuevo Acuerdo", "Editar Responsables", "Nueva Minuta"]
+        self.special_windows_titles = ["Gestión de Acuerdos", "Registrar Nuevo Acuerdo", "Editar Responsables", "Nueva Minuta", "Administración de Host"]
         self.main_window_position = None
         self.main_window_size = None
         self.user_moved_windows = set()
@@ -238,6 +238,29 @@ class WindowManager:
             if self.main_window_position:
                 main_x, main_y = self.main_window_position
                 main_width, main_height = self.main_window_size
+                base_width = 400
+                base_height = 450
+                width = int(base_width * scale)
+                height = int(base_height * scale)
+                new_x = main_x + main_width + int(20 * scale)
+                new_y = main_y
+            else:
+                l, t, r, b = work_area
+                base_width = 400
+                base_height = 450
+                width = int(base_width * scale)
+                height = int(base_height * scale)
+                new_x = l + (r - l - width) // 2
+                new_y = t + (b - t - height) // 2
+
+            window.geometry(f"{width}x{height}+{new_x}+{new_y}")
+            window.resizable(True, True)
+            self.window_dpi[window] = dpi
+
+        elif title == "Administración de Host":
+            if self.main_window_position:
+                main_x, main_y = self.main_window_position
+                main_width, main_height = self.main_window_size
                 base_width = 750
                 base_height = 450
                 width = int(base_width * scale)
@@ -246,8 +269,8 @@ class WindowManager:
                 new_y = main_y
             else:
                 l, t, r, b = work_area
-                base_width = 700
-                base_height = 400
+                base_width = 1500
+                base_height = 500
                 width = int(base_width * scale)
                 height = int(base_height * scale)
                 new_x = l + (r - l - width) // 2
