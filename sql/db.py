@@ -82,6 +82,7 @@ class MasterDBManager:
             conn.close()
 
 
+
 class MinutasDB:
     def __init__(self, root=None, db_path=None, is_default=True):  # Nuevo parámetro
         self.root = root
