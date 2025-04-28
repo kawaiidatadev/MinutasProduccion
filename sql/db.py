@@ -240,12 +240,30 @@ def db_create():
         return str(e)
 
 
+def mostrar_mensaje_temporal(mensaje, duracion=1000):  # Duración en milisegundos (1000 ms = 1 segundo)
+    ventana_mensaje = tk.Toplevel()
+    ventana_mensaje.title("Información")
+    ventana_mensaje.geometry("300x100")  # Tamaño fijo
+    ventana_mensaje.resizable(False, False)  # No se puede redimensionar
+    ventana_mensaje.transient()  # Se coloca encima de la ventana principal
+    ventana_mensaje.attributes('-topmost', True)  # Siempre arriba
+    ventana_mensaje.overrideredirect(True)  # Quita los botones de cerrar/minimizar/mover
+    move_to_largest_monitor(ventana_mensaje)
+
+    label = tk.Label(ventana_mensaje, text=mensaje, font=("Arial", 12))
+    label.pack(expand=True, fill="both")
+
+    # Cerrar la ventana después de la duración especificada
+    ventana_mensaje.after(duracion, ventana_mensaje.destroy)
+
+
 def crear_nueva_minuta():
     """Interfaz moderna para crear nueva minuta"""
     ventana = tk.Toplevel()
     ventana.title("Nueva Minuta")
     ventana.configure(bg='#f5f5f5')
     move_to_largest_monitor(ventana)
+
 
     # Primero definimos todas las funciones internas
     def actualizar_ui(event=None):
@@ -337,37 +355,16 @@ def crear_nueva_minuta():
         ruta_completa = os.path.join(directorio_base, nombre_minuta)
 
         if os.path.exists(ruta_completa):
-            messagebox.showerror("Error", "Ya existe una minuta con ese nombre.\nPor favor use un nombre diferente.")
+            mostrar_mensaje_temporal("Ya existe una minuta con ese nombre.\nPor favor use un nombre diferente.", 2000)
             return
 
         try:
+
             MinutasDB(db_path=ruta_completa)
             registrar_nueva_db_en_master(ruta_completa, nombre_minuta, objetivo, asuntos)
+            mostrar_mensaje_temporal("Se creó la minuta", 1500)  # 1000 ms = 1 segundo
+            ventana.destroy()
 
-            # Mensaje de éxito
-            success_window = tk.Toplevel(ventana)
-            success_window.title("Minuta creada")
-            move_to_largest_monitor(success_window)
-            success_window.grab_set()
-
-            success_window.configure(bg='#ffffff')
-            success_window.resizable(False, False)
-
-            # Contenido del mensaje de éxito
-            success_content = tk.Frame(success_window, bg='#ffffff', padx=30, pady=20)
-            success_content.pack()
-
-            tk.Label(success_content, text="✓", font=('Helvetica', 24, 'bold'),
-                    fg='#2ecc71', bg='#ffffff').pack(pady=(0, 10))
-            tk.Label(success_content, text="Minuta creada exitosamente",
-                    font=('Helvetica', 12), bg='#ffffff').pack()
-            tk.Label(success_content, text=ruta_completa, font=('Helvetica', 9),
-                    fg='#555555', bg='#ffffff').pack(pady=(5, 15))
-
-            tk.Button(success_content, text="Aceptar",
-                     command=lambda: [success_window.destroy(), ventana.destroy()],
-                     bg='#2ecc71', fg='white', bd=0, padx=20, pady=5,
-                     activebackground='#27ae60').pack()
 
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo crear la minuta:\n{str(e)}")
@@ -411,7 +408,7 @@ def crear_nueva_minuta():
     campos = [
         ("Nombre de la minuta", 30, "Ej: Reunión Semanal - Proyecto X"),
         ("Objetivo principal", 50, "Ej: Revisar avances del sprint actual"),
-        ("Asuntos a tratar", 50, "Ej: 1. Problemas técnicos, 2. Planificación")
+        ("Asuntos a tratar", 50, "Ej: Resolución de problemas técnicos")
     ]
 
     entries = []
@@ -467,5 +464,7 @@ def crear_nueva_minuta():
         entry.bind('<KeyRelease>', actualizar_ui)
         entry.bind('<FocusIn>', lambda e: actualizar_ui())
         entry.bind('<FocusOut>', lambda e: actualizar_ui())
+        # Agregar evento Enter para cada entry
+        entry.bind('<Return>', lambda e: crear_minuta())
 
     ventana.mainloop()
