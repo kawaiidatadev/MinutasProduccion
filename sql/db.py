@@ -71,12 +71,17 @@ class MasterDBManager:
 
             # Primera consulta: buscar en ingresos por usuario actual
             cursor.execute("""
-                SELECT direccion 
-                FROM ingresos 
-                WHERE administrador = ?
-                OR esclavo = ?
-                ORDER BY fecha_de_ultimo_acceso DESC 
-                LIMIT 1
+                SELECT i.direccion
+                  FROM ingresos AS i
+                  JOIN dbs      AS d
+                    ON i.direccion = d.direccion
+                   AND d.estatus   <> 'Eliminada'
+                 WHERE i.administrador = ?
+                    OR i.esclavo       = ?
+                 ORDER
+                    BY i.fecha_de_ultimo_acceso DESC
+                 LIMIT 1;
+
             """, (self.current_user, self.current_user))
             result = cursor.fetchone()
 
@@ -282,9 +287,15 @@ def crear_nueva_minuta():
     ventana = tk.Toplevel()
     ventana.title("Nueva Minuta")
     ventana.configure(bg='#f5f5f5')
-    move_to_largest_monitor(ventana)
     ventana.transient()  # Se coloca encima de la ventana principal
     ventana.attributes('-topmost', True)  # Siempre arriba
+    move_to_largest_monitor(ventana)
+
+    # Maximizar la ventana según el sistema operativo
+    if sys.platform == 'win32':
+        ventana.state('zoomed')  # Para Windows
+
+
 
 
     # Primero definimos todas las funciones internas

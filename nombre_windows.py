@@ -36,6 +36,5 @@ def obtener_nombre_completo_usuario():
 
     return usuario, nombre_completo or "(Sin nombre completo)"
 
-# if __name__ == "__main__":
-#     usuario, nombre = obtener_nombre_completo_usuario()
-#     print(f"Usuario: {usuario} | Nombre completo: {nombre}")
+
+

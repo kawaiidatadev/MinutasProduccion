@@ -7,6 +7,78 @@ import getpass
 from datetime import datetime
 from tkinter import filedialog, messagebox
 import tkinter as tk
+from rutas import MASTER
+
+
+
+def obtener_info_db(db_path):
+    """Obtiene información de la base de datos desde MASTER"""
+    try:
+        conn = sqlite3.connect(MASTER)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """SELECT usuario_windows, objetivo, asuntos 
+               FROM dbs 
+               WHERE direccion = ? 
+               LIMIT 1""",
+            (db_path,)
+        )
+        resultado = cursor.fetchone()
+        conn.close()
+
+        if resultado:
+            from nombre_windows import obtener_nombre_completo_en_dominio
+            import win32api
+
+            usuario_windows = resultado[0]
+            dominio = win32api.GetDomainName()
+            nombre_completo = obtener_nombre_completo_en_dominio(usuario_windows, dominio)
+            print(nombre_completo)
+
+            return {
+                'usuario_windows': usuario_windows,
+                'nombre_completo': nombre_completo,
+                'objetivo': resultado[1],
+                'asuntos': resultado[2]
+            }
+        return None
+    except Exception as e:
+        print(f"Error al consultar MASTER: {str(e)}")
+
+
+def obtener_db_name(db_path):
+    """Obtiene información de la base de datos desde MASTER y formatea el nombre"""
+    try:
+        conn = sqlite3.connect(MASTER)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """SELECT db_name
+               FROM dbs 
+               WHERE direccion = ? 
+               LIMIT 1""",
+            (db_path,)
+        )
+        resultado = cursor.fetchone()
+        conn.close()
+
+        if resultado:
+            nombre_db = resultado[0]
+            print("Nombre original:", nombre_db)
+
+            # Formatear el nombre:
+            # 1. Reemplazar _ por espacios
+            # 2. Capitalizar cada palabra
+            nombre_formateado = nombre_db.replace('_', ' ').title()
+            print("Nombre formateado:", nombre_formateado)
+
+            return nombre_formateado
+        return None
+    except Exception as e:
+        print(f"Error al consultar MASTER: {str(e)}")
+        return None
+
 
 
 def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
@@ -170,6 +242,8 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
     button_frame.columnconfigure(1, weight=1)
     button_frame.columnconfigure(2, weight=1)
 
+
+
     def confirmar_cierre():
         comentarios = comentarios_text.get("1.0", "end").strip()
 
@@ -201,6 +275,12 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
             fecha_cierre = datetime.now()
             year_folder = str(fecha_cierre.year)
             month_folder = f"{fecha_cierre.month:02d}"
+            # Obtener nombre de la base de datos
+            db_name = obtener_db_name(db_path)
+            if not db_name:
+                db_name = "DESCONOCIDO"
+                messagebox.showwarning("Advertencia",
+                                       "No se encontró el nombre de la base de datos en MASTER, usando valor por defecto")
 
             # Limpiar nombres de responsables para usar en ruta
             clean_responsables = "_".join(
@@ -209,9 +289,9 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
 
             base_path = os.path.join(
                 BASE_EVIDENCIAS,
+                db_name,
                 year_folder,
                 month_folder,
-                clean_responsables,
                 f"Acuerdo_{id_acuerdo}"
             )
 
@@ -228,7 +308,7 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
             pdf_path = generate_pdf_report(
                 id_acuerdo, acuerdo_text, responsables,
                 fecha_reg, fecha_comp, fecha_cierre,
-                comentarios, files_to_upload, base_path
+                comentarios, files_to_upload, base_path, db_path
             )
 
             # 1. Guardar en historial
@@ -315,15 +395,20 @@ def cerrar_acuerdo_seleccionado(id_acuerdo, tree=None, db_path=None):
     details_window.minsize(details_window.winfo_width(), details_window.winfo_height())
 
 
+
 def generate_pdf_report(id_acuerdo, acuerdo, responsables, fecha_registro,
                         fecha_compromiso, fecha_cierre, comentarios,
-                        evidencias, output_folder):
+                        evidencias, output_folder, db_path):
     """Genera un reporte PDF con los detalles del acuerdo"""
     from fpdf import FPDF
     from datetime import datetime
     import os
     import platform
     import subprocess
+
+    info_db = obtener_info_db(db_path)  # Llamamos a la nueva función aquí
+
+
 
     class PDF(FPDF):
         def __init__(self):
@@ -393,6 +478,16 @@ def generate_pdf_report(id_acuerdo, acuerdo, responsables, fecha_registro,
     pdf.line(pdf.l_margin + 20, pdf.get_y(), pdf.w - pdf.r_margin - 20, pdf.get_y())
     pdf.ln(15)  # Más espacio después del título
 
+    # >>>>>>> NUEVO: Creador de la minuta <<<<<<<
+    if info_db:
+        pdf.set_font("Arial", 'I', 10)
+        pdf.set_text_color(100, 100, 100)  # Color gris para diferenciar
+        pdf.cell(0, 10, f"Creador de la minuta: {info_db['nombre_completo']}", 0, 1, 'R')
+        pdf.ln(5)
+
+    # Resetear color para el resto del contenido
+    pdf.set_text_color(0, 80, 180)  # Volver al color principal
+
     # Información del acuerdo
     def add_section(title, content, bg_color=(0, 80, 180)):
         # Fondo del título
@@ -410,6 +505,32 @@ def generate_pdf_report(id_acuerdo, acuerdo, responsables, fecha_registro,
     # Secciones con diseño mejorado
     add_section("Acuerdo", acuerdo)
     add_section("Responsables", responsables, (50, 50, 50))
+
+    # ======== NUEVO: Sección de datos de la base de datos ========
+    if info_db:
+        # Sección Objetivo
+        pdf.set_fill_color(34, 139, 34)  # Verde oscuro
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, " Objetivo del acuerdo: ", 0, 1, 'L', fill=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", '', 11)
+        pdf.multi_cell(0, 7, info_db['objetivo'])
+        pdf.ln(5)
+
+        # Sección Asuntos
+        pdf.set_fill_color(100, 100, 100)  # Gris
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, " Asuntos relacionados: ", 0, 1, 'L', fill=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("Arial", '', 11)
+        pdf.multi_cell(0, 7, info_db['asuntos'])
+        pdf.ln(10)
+    else:
+        pdf.set_text_color(255, 0, 0)
+        pdf.cell(0, 10, "¡Advertencia: No se encontró información en MASTER!", 0, 1)
+        pdf.ln(10)
 
     # Fechas en formato tabla mejorada
     pdf.set_fill_color(240, 240, 240)

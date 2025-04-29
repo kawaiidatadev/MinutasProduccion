@@ -22,10 +22,20 @@ def host(db_path):
             else:
                 return
 
+        def on_close(event=None):
+            """Cerrar la ventana cuando se intenta cerrar o se pierde el foco"""
+            if host_window.winfo_exists():  # Evitar errores si ya fue destruida
+                host_window.destroy()
+
         # Crear ventana principal
         host_window = tk.Tk()
         host_window.title("Administración de Host")
+        host_window.protocol("WM_DELETE_WINDOW", on_close)  # Al cerrar con la X
+
         move_to_largest_monitor(host_window)
+        # Maximizar la ventana según el sistema operativo
+        if sys.platform == 'win32':
+            host_window.state('zoomed')  # Para Windows
 
         # Crear notebook (pestañas)
         notebook = ttk.Notebook(host_window)
@@ -54,6 +64,8 @@ def host(db_path):
         # Frame para botones
         btn_frame = ttk.Frame(solicitudes_frame)
         btn_frame.pack(pady=10)
+
+        move_to_largest_monitor(host_window)
 
         def cargar_solicitudes():
             """Cargar las solicitudes pendientes"""
@@ -479,12 +491,14 @@ def host(db_path):
             db_name = otros_hosts_tree.item(seleccion[0], 'values')[0]
 
             try:
+                user = getpass.getuser() if usuario_actual == 'Master' else usuario_actual
+
                 # Insertar nueva solicitud
                 cursor.execute("""
                     INSERT INTO solicitudes_acceso 
                     (db_id, usuario_solicitante, fecha_solicitud, estatus)
                     VALUES (?, ?, ?, 'pendiente')
-                """, (db_id, usuario_actual, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                """, (db_id, user, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
                 conn.commit()
                 messagebox.showinfo("Éxito",
@@ -567,7 +581,7 @@ def host(db_path):
         cargar_solicitudes()
         cargar_hosts()
         cargar_hosts_compartidos()  # Nueva línea
-        host_window.mainloop()
+        move_to_largest_monitor(host_window)
 
     except Exception as e:
         messagebox.showerror("Error", f"Ocurrió un error: {str(e)}")

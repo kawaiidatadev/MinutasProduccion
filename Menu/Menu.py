@@ -19,6 +19,112 @@ class DPI_AWARENESS:
     PER_MONITOR_AWARE = 2
 
 
+def get_system_scaling():
+    """Detecta el factor de escalado del sistema en Windows de manera robusta"""
+    scale_factor = 1.0  # Valor por defecto
+
+    try:
+        # Primero intentamos con la API moderna (Windows 8.1+)
+        shcore = ctypes.WinDLL('shcore', use_last_error=True)
+
+        # Definimos los tipos de función correctamente
+        shcore.GetScaleFactorForDevice.restype = wintypes.UINT
+        shcore.GetScaleFactorForDevice.argtypes = [wintypes.DWORD]
+
+        # Establecemos la conciencia DPI
+        if hasattr(shcore, 'SetProcessDpiAwareness'):
+            shcore.SetProcessDpiAwareness(DPI_AWARENESS.PER_MONITOR_AWARE)
+
+        # Obtenemos el factor de escala
+        scale_factor = shcore.GetScaleFactorForDevice(0) / 100.0  # 0 = DEVICE_PRIMARY
+        logger.info(f"Escalado detectado (shcore): {scale_factor}")
+
+    except (AttributeError, OSError, WindowsError) as e:
+        logger.warning(f"No se pudo usar shcore: {e}. Intentando métodos alternativos...")
+        try:
+            # Fallback para versiones más antiguas (Windows Vista/7)
+            user32 = ctypes.WinDLL('user32', use_last_error=True)
+            if hasattr(user32, 'SetProcessDPIAware'):
+                user32.SetProcessDPIAware()
+
+            # Obtenemos la DPI del monitor
+            hdc = user32.GetDC(0)
+            if hdc:
+                LOGPIXELSX = 88
+                try:
+                    gdi32 = ctypes.WinDLL('gdi32', use_last_error=True)
+                    dpi = gdi32.GetDeviceCaps(hdc, LOGPIXELSX)
+                    scale_factor = dpi / 96.0
+                    logger.info(f"Escalado detectado (GetDeviceCaps): {scale_factor}")
+                finally:
+                    user32.ReleaseDC(0, hdc)
+
+        except Exception as e:
+            logger.error(f"Error al obtener DPI: {e}. Usando valor por defecto 1.0")
+
+    # Aseguramos límites razonables (0.5 - 3.0)
+    return max(0.5, min(3.0, scale_factor))
+
+
+def apply_scaling(root, scale_factor):
+    """Aplica el escalado a la ventana y fuentes de Tkinter de manera más robusta"""
+    if not root or not hasattr(root, 'tk'):
+        logger.error("Objeto root de Tkinter no válido")
+        return {}
+
+    try:
+        # Ajuste de escalado de Tkinter con validación
+        try:
+            current_scaling = float(root.tk.call('tk', 'scaling'))
+            new_scaling = max(0.5, min(3.0, scale_factor * 1.33))
+            root.tk.call('tk', 'scaling', new_scaling)
+            logger.info(f"Escalado Tkinter ajustado de {current_scaling} a {new_scaling}")
+        except Exception as e:
+            logger.error(f"Error al ajustar tk scaling: {e}")
+
+        # Fuentes base con tamaños mínimos/máximos
+        font_configs = {
+            'title_font': {'size': 14, 'min': 10, 'max': 20},
+            'button_font': {'size': 10, 'min': 8, 'max': 16},
+            'clock_font': {'size': 10, 'min': 8, 'max': 16},
+            'card_title_font': {'size': 11, 'min': 9, 'max': 18},
+            'card_value_font': {'size': 24, 'min': 16, 'max': 36},
+            'card_footer_font': {'size': 9, 'min': 7, 'max': 14}
+        }
+
+        adjusted_fonts = {}
+        for name, config in font_configs.items():
+            try:
+                # Cálculo no lineal con límites
+                base_size = config['size']
+                adjusted_size = int(base_size / (scale_factor ** 0.4))
+                clamped_size = max(config['min'], min(config['max'], adjusted_size))
+
+                weight = "bold" if "title" in name or "value" in name else "normal"
+
+                adjusted_fonts[name] = font.Font(
+                    family="Segoe UI",
+                    size=clamped_size,
+                    weight=weight
+                )
+                logger.debug(f"Fuente {name} ajustada a {clamped_size}px")
+
+            except Exception as e:
+                logger.error(f"Error al crear fuente {name}: {e}")
+                # Fuente de fallback
+                adjusted_fonts[name] = font.Font(
+                    family="Segoe UI",
+                    size=config['size'],
+                    weight="bold" if "title" in name or "value" in name else "normal"
+                )
+
+        return adjusted_fonts
+
+    except Exception as e:
+        logger.critical(f"Error crítico en apply_scaling: {e}")
+        return {}
+
+
 def show_main_menu(db_path):
     """Función principal con autoajuste para HiDPI"""  # <-- 4 espacios
     root = tk.Tk() if not tk._default_root else tk._default_root
@@ -32,10 +138,33 @@ def show_main_menu(db_path):
         from acuerdos.ventana_names import move_to_largest_monitor
         move_to_largest_monitor(root)
 
-    root.title("Sistema de Acuerdos - Menú Principal")
     #bloquear_ventana_robusta(root)
     from acuerdos.ventana_names import move_to_largest_monitor
     move_to_largest_monitor(root)
+
+
+    # 1. Detectar escalado del sistema
+    scale_factor = get_system_scaling()
+    print(f"Factor de escalado detectado: {scale_factor}")
+
+    # 2. Aplicar configuración HiDPI
+    if sys.platform == 'win32':
+        root.tk.call('tk', 'scaling', scale_factor * 1.5)
+
+    # 3. Configuración de ventana con escalado
+    base_width, base_height = 800, 825
+    width = int(base_width / scale_factor)
+    height = int(base_height / scale_factor)
+
+    root.title("Sistema de Acuerdos - Menú Principal")
+    root.minsize(int(1000 / scale_factor), int(600 / scale_factor))
+
+    # Centrado con escalado
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width // 2) - (width // 2)
+    y = (screen_height // 2) - (height // 2)
+    root.geometry(f"{width}x{height}+{x}+{y}")
 
     # Maximizar la ventana según el sistema operativo
     if sys.platform == 'win32':
@@ -43,7 +172,8 @@ def show_main_menu(db_path):
         root.state('zoomed')  # Para Windows
 
 
-
+    # 4. Ajustar fuentes
+    fonts = apply_scaling(root, scale_factor)
 
     # Paleta de colores mejorada
     bg_color = "#f5f7fa"
