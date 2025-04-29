@@ -112,18 +112,19 @@ def host(db_path):
         notebook.add(hosts_frame, text="Mis Hosts")
 
         # Treeview para hosts del usuario
-        hosts_tree = ttk.Treeview(hosts_frame, columns=('db_name', 'fecha_acceso', 'objetivo', 'asuntos'),
+        hosts_tree = ttk.Treeview(hosts_frame, columns=('db_name', 'fecha_acceso', 'objetivo', 'asuntos', 'direccion'),
                                   show='headings')
         hosts_tree.heading('db_name', text="Base de Datos", anchor=tk.W)
         hosts_tree.heading('fecha_acceso', text="Último Acceso", anchor=tk.W)
-        hosts_tree.heading('objetivo', text="objetivo", anchor=tk.W)
-        hosts_tree.heading('asuntos', text="asuntos", anchor=tk.W)
+        hosts_tree.heading('objetivo', text="Objetivo", anchor=tk.W)
+        hosts_tree.heading('asuntos', text="Asuntos", anchor=tk.W)
 
         # Configurar columnas
         hosts_tree.column('db_name', width=200)
         hosts_tree.column('fecha_acceso', width=150)
         hosts_tree.column('objetivo', width=400)
         hosts_tree.column('asuntos', width=500)
+        hosts_tree.column('direccion', width=0, stretch=False)  # Columna oculta
 
         hosts_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
@@ -192,25 +193,56 @@ def host(db_path):
                         parent=hosts_frame
                     )
 
+        def conectar_otro_host():
+            """Conectar al host seleccionado en Otros Hosts"""
+            seleccion = otros_hosts_tree.selection()
+            if seleccion:
+                direccion = otros_hosts_tree.item(seleccion[0])['values'][5]
+                messagebox.showinfo("Conectar", f"Conectando a: {direccion}", parent=otros_hosts_frame)
+                print(f'Aqui es host Externo: {direccion}')
+                from test_consulta_ordenada import registrar_ingreso
+                registrar_ingreso(direccion, MASTER, usuario_actual, 3)
+
+        def conectar_host():
+            """Conectar al host seleccionado"""
+            seleccion = hosts_tree.selection()
+            if seleccion:
+
+                db_name = hosts_tree.item(seleccion[0])['values'][0]
+
+                # Consultar la dirección completa desde la base de datos
+                cursor.execute("""
+                    SELECT direccion 
+                    FROM dbs 
+                    WHERE db_name = ? 
+                    AND usuario_windows = ?
+                """, (db_name, usuario_actual))
+
+                resultado = cursor.fetchone()
+                if resultado:
+                    direccion = resultado[0]
+                    messagebox.showinfo("Conectar", f"Conectando a: {direccion}", parent=hosts_frame)
+                    print(f'Aqui es host personal: {direccion}')
+                    from test_consulta_ordenada import registrar_ingreso
+                    registrar_ingreso(direccion, MASTER, usuario_actual, 3)
+                else:
+                    messagebox.showerror("Error", "No se pudo encontrar la dirección de la base de datos",
+                                         parent=hosts_frame)
+
         def cargar_hosts():
             """Cargar los hosts del usuario"""
             hosts_tree.delete(*hosts_tree.get_children())
             cursor.execute("""
-                SELECT db_name, fecha_de_ultimo_acceso, objetivo, asuntos
+                SELECT db_name, fecha_de_ultimo_acceso, objetivo, asuntos, direccion
                 FROM dbs
                 WHERE usuario_windows = ? AND estatus == 'Activa'
                 ORDER BY fecha_de_ultimo_acceso DESC
             """, (usuario_actual,))
 
             for host in cursor.fetchall():
-                hosts_tree.insert('', tk.END, values=host)
+                # Insertamos todos los valores pero solo mostramos los primeros 4
+                hosts_tree.insert('', tk.END, values=host[:4] + ('',) + host[4:])
 
-        def conectar_host():
-            """Conectar al host seleccionado"""
-            seleccion = hosts_tree.selection()
-            if seleccion:
-                direccion = hosts_tree.item(seleccion[0])['values'][2]
-                messagebox.showinfo("Conectar", f"Conectando a: {direccion}")
 
 
 
@@ -240,14 +272,18 @@ def host(db_path):
         menu_contextual.add_command(label="Retirar permiso", command=lambda: retirar_permiso())
 
         # Pestaña 4: Otros Host
+        # Pestaña 4: Otros Host
         otros_hosts_frame = ttk.Frame(notebook)
         notebook.add(otros_hosts_frame, text="Otros Host")
 
         # Treeview para otros hosts con columna adicional para el estado
-        otros_hosts_tree = ttk.Treeview(otros_hosts_frame,
-                                        columns=('db_name', 'usuario_windows', 'objetivo', 'asuntos', 'fecha_creacion',
-                                                 'estado'),
-                                        show='headings')
+        otros_hosts_tree = ttk.Treeview(
+            otros_hosts_frame,
+            columns=('db_name', 'usuario_windows', 'objetivo', 'asuntos', 'fecha_creacion', 'direccion', 'estado'),
+            show='headings'
+        )
+
+        # Configurar encabezados
         otros_hosts_tree.heading('db_name', text="Base de Datos", anchor=tk.W)
         otros_hosts_tree.heading('usuario_windows', text="Propietario", anchor=tk.W)
         otros_hosts_tree.heading('objetivo', text="Objetivo", anchor=tk.W)
@@ -255,7 +291,10 @@ def host(db_path):
         otros_hosts_tree.heading('fecha_creacion', text="Fecha Creación", anchor=tk.W)
         otros_hosts_tree.heading('estado', text="Estado", anchor=tk.W)
 
-        # Configurar columnas
+        # Ocultar columna de dirección
+        otros_hosts_tree.column('direccion', width=0, stretch=False)
+
+        # Configurar columnas visibles
         otros_hosts_tree.column('db_name', width=200)
         otros_hosts_tree.column('usuario_windows', width=150)
         otros_hosts_tree.column('objetivo', width=300)
@@ -275,6 +314,15 @@ def host(db_path):
         btn_solicitar = ttk.Button(otros_hosts_frame, text="Solicitar permiso", state=tk.DISABLED)
         btn_solicitar.pack(pady=10)
 
+        # Botón para ver dirección
+        btn_ver_direccion = ttk.Button(
+            otros_hosts_frame,
+            text="Conectar",
+            state=tk.DISABLED,
+            command=conectar_otro_host
+        )
+        btn_ver_direccion.pack(pady=10)
+
         def cargar_otros_hosts():
             """Cargar otros hosts disponibles con su estado actual"""
             otros_hosts_tree.delete(*otros_hosts_tree.get_children())
@@ -285,7 +333,8 @@ def host(db_path):
                     d.usuario_windows, 
                     d.objetivo, 
                     d.asuntos, 
-                    d.fecha_creacion, 
+                    d.fecha_creacion,
+                    d.direccion, 
                     d.id,
                     CASE 
                         WHEN EXISTS (
@@ -293,20 +342,20 @@ def host(db_path):
                             WHERE db_id = d.id 
                             AND usuario_solicitante = ? 
                             AND estatus = 'pendiente'
-                        ) THEN 'Pendiente'
+                        ) THEN 'pendiente'
                         WHEN EXISTS (
                             SELECT 1 FROM solicitudes_acceso 
                             WHERE db_id = d.id 
                             AND usuario_solicitante = ? 
                             AND estatus = 'aprobado'
-                        ) THEN 'Aprobado'
+                        ) THEN 'aprobado'
                         WHEN EXISTS (
                             SELECT 1 FROM solicitudes_acceso 
                             WHERE db_id = d.id 
                             AND usuario_solicitante = ? 
                             AND estatus = 'rechazado'
-                        ) THEN 'Rechazado'
-                        ELSE 'Disponible'
+                        ) THEN 'rechazado'
+                        ELSE 'disponible'
                     END as estado
                 FROM dbs d
                 WHERE d.estatus = 'Activa' 
@@ -315,8 +364,8 @@ def host(db_path):
             """, (usuario_actual, usuario_actual, usuario_actual, usuario_actual))
 
             for db in cursor.fetchall():
-                db_id = db[5]
-                estado = db[6].lower()  # Convertir a minúsculas para los tags
+                db_id = db[6]
+                estado = db[7].lower()  # Convertir a minúsculas para los tags
 
                 # Mostrar estado con formato
                 estado_mostrar = {
@@ -326,26 +375,43 @@ def host(db_path):
                     'disponible': '🔵 Disponible'
                 }.get(estado, estado)
 
+                # Valores a mostrar (excluyendo el ID)
+                valores_mostrar = (db[0], db[1], db[2], db[3], db[4], db[5], estado_mostrar)
+
                 otros_hosts_tree.insert(
                     '', tk.END,
-                    values=db[:5] + (estado_mostrar,),
+                    values=valores_mostrar,
                     iid=db_id,
                     tags=(estado,)
                 )
 
+        def ver_direccion(tree):
+            """Mostrar la dirección del host seleccionado"""
+            seleccion = tree.selection()
+            if not seleccion:
+                return
+
+            item = seleccion[0]
+            direccion = tree.item(item, "values")[5]  # Índice 5 corresponde a dirección
+            messagebox.showinfo("Dirección", f"Dirección del host:\n{direccion}", parent=otros_hosts_frame)
+
+
         def on_select_otros_hosts(event):
             """Manejar selección de filas"""
             seleccion = otros_hosts_tree.selection()
+            btn_solicitar.config(state=tk.DISABLED)
+            btn_ver_direccion.config(state=tk.DISABLED)
+
             if seleccion:
                 item = seleccion[0]
                 estado = otros_hosts_tree.item(item, 'tags')[0]  # Obtener el tag de estado
 
-                # Solo permitir solicitar si está disponible o fue rechazada
-                if estado in ['disponible', 'rechazado']:
+                if estado == 'aprobado':
+                    btn_ver_direccion.config(state=tk.NORMAL)
+                elif estado in ['disponible', 'rechazado']:
                     btn_solicitar.config(state=tk.NORMAL)
                 else:
                     otros_hosts_tree.selection_remove(item)
-                    btn_solicitar.config(state=tk.DISABLED)
                     if estado == 'pendiente':
                         messagebox.showinfo("Información",
                                             "Ya tiene una solicitud pendiente para esta base de datos",
@@ -354,8 +420,54 @@ def host(db_path):
                         messagebox.showinfo("Información",
                                             "Ya tiene acceso aprobado a esta base de datos",
                                             parent=otros_hosts_frame)
-            else:
+
+        import getpass  # Asegúrate de importar esto al inicio del archivo si no lo tienes ya
+
+        def solicitar_acceso():
+            """Crear solicitud de acceso"""
+            seleccion = otros_hosts_tree.selection()
+            if not seleccion:
+                return
+
+            db_id = seleccion[0]
+            db_name = otros_hosts_tree.item(seleccion[0], 'values')[0]
+
+            try:
+                solicitante = usuario_actual
+                if solicitante.lower() == "master":
+                    solicitante = getpass.getuser()  # Obtener usuario de Windows si es "Master"
+
+                # Insertar nueva solicitud
+                cursor.execute("""
+                    INSERT INTO solicitudes_acceso 
+                    (db_id, usuario_solicitante, fecha_solicitud, estatus)
+                    VALUES (?, ?, ?, 'pendiente')
+                """, (db_id, solicitante, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+
+                conn.commit()
+                messagebox.showinfo("Éxito",
+                                    f"Solicitud enviada para: {db_name}",
+                                    parent=otros_hosts_frame)
+
+                # Actualizar la vista
+                cargar_otros_hosts()
                 btn_solicitar.config(state=tk.DISABLED)
+
+            except sqlite3.IntegrityError:
+                messagebox.showwarning("Advertencia",
+                                       "Ya existe una solicitud para esta base de datos",
+                                       parent=otros_hosts_frame)
+            except Exception as e:
+                messagebox.showerror("Error",
+                                     f"Error al enviar solicitud:\n{str(e)}",
+                                     parent=otros_hosts_frame)
+
+        # Configurar eventos
+        btn_solicitar.config(command=solicitar_acceso)
+        otros_hosts_tree.bind('<<TreeviewSelect>>', on_select_otros_hosts)
+
+        # Cargar datos iniciales
+        cargar_otros_hosts()
 
         def solicitar_acceso():
             """Crear solicitud de acceso"""
@@ -485,11 +597,13 @@ def get_pending_requests_count(db_path):
             # Solo contar si el usuario es el propietario
             if usuario_actual.lower() == usuario_db.lower():
                 cursor.execute("""
-                    SELECT COUNT(*) 
-                    FROM solicitudes_acceso 
-                    WHERE db_id = ? 
-                    AND estatus = 'pendiente'
-                """, (db_id,))
+                            SELECT COUNT(*) 
+                            FROM solicitudes_acceso s
+                            JOIN dbs d ON s.db_id = d.id
+                            WHERE s.estatus = 'pendiente'
+                            AND d.usuario_windows = ?
+                        """, (usuario_actual,))
+
                 return cursor.fetchone()[0]
         return 0
     except Exception as e:

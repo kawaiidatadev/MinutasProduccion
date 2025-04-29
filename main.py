@@ -5,6 +5,7 @@ from monitor_exe import ejecutar_monitor
 import locale
 
 
+
 def main():
     verificar_imports()
     # Configuración regional

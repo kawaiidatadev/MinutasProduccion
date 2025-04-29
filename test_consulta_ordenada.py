@@ -1,7 +1,9 @@
-from common import *
+import sqlite3
+from datetime import datetime
+from time import sleep
 from rutas import MASTER
 
-def registrar_ingreso(direccion_filtrada, path_master=MASTER, usuario_actual_windows, max_intentos=3):
+def registrar_ingreso(direccion_filtrada, path_master=MASTER, usuario_actual_windows="", max_intentos=3):
     """
     Registra el ingreso a una base de datos en el sistema maestro.
     Crea la estructura si no existe e identifica si el acceso es desde 'dbs' o 'solicitudes_acceso'.
@@ -125,4 +127,4 @@ def registrar_ingreso(direccion_filtrada, path_master=MASTER, usuario_actual_win
                 reinicio_conexion()
 
     print(f"\n× Operación fallida después de {max_intentos} intentos")
-    return False
+    return direccion_filtrada

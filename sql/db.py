@@ -62,25 +62,44 @@ class MasterDBManager:
             raise
 
     def get_most_recent_db(self):
-        """Obtiene la ruta de la base de datos más reciente del usuario actual"""
+        """Obtiene la ruta de la base de datos más reciente del usuario actual,
+        o la base de datos 'Default' si no hay ingresos registrados."""
+        conn = None
         try:
             conn = sqlite3.connect(self.master_db_path)
             cursor = conn.cursor()
+
+            # Primera consulta: buscar en ingresos por usuario actual
             cursor.execute("""
                 SELECT direccion 
-                FROM dbs 
-                WHERE usuario_windows = ? 
+                FROM ingresos 
+                WHERE administrador = ?
+                OR esclavo = ?
                 ORDER BY fecha_de_ultimo_acceso DESC 
                 LIMIT 1
-            """, (self.current_user,))
+            """, (self.current_user, self.current_user))
             result = cursor.fetchone()
+
+            # Si no hay resultado, buscar en dbs por nombre 'Default'
+            if not result:
+                print("No se encontró ingreso reciente, buscando base de datos 'Default' en dbs...")
+                cursor.execute("""
+                    SELECT direccion 
+                    FROM dbs 
+                    WHERE db_name = 'Default'
+                    LIMIT 1
+                """)
+                result = cursor.fetchone()
+
             return result[0] if result else None
+
         except sqlite3.Error as e:
             print(f"Error al consultar master.db: {str(e)}")
             return None
-        finally:
-            conn.close()
 
+        finally:
+            if conn:
+                conn.close()
 
 
 class MinutasDB:
