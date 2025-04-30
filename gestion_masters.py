@@ -219,27 +219,39 @@ def host(db_path):
             """Conectar al host seleccionado"""
             seleccion = hosts_tree.selection()
             if seleccion:
-
                 db_name = hosts_tree.item(seleccion[0])['values'][0]
+                print(f"db_name: {db_name} y usuario actual: {usuario_actual}")
 
-                # Consultar la dirección completa desde la base de datos
-                cursor.execute("""
-                    SELECT direccion 
-                    FROM dbs 
-                    WHERE db_name = ? 
-                    AND usuario_windows = ?
-                """, (db_name, usuario_actual))
+                # Crear una nueva conexión y cursor para esta operación
+                try:
+                    conn = sqlite3.connect(MASTER)  # MASTER debería ser la ruta a tu base de datos maestra
+                    cursor = conn.cursor()
 
-                resultado = cursor.fetchone()
-                if resultado:
-                    direccion = resultado[0]
-                    messagebox.showinfo("Conectar", f"Conectando a: {direccion}", parent=hosts_frame)
-                    print(f'Aqui es host personal: {direccion}')
-                    from test_consulta_ordenada import registrar_ingreso
-                    registrar_ingreso(direccion, MASTER, usuario_actual, 3)
-                else:
-                    messagebox.showerror("Error", "No se pudo encontrar la dirección de la base de datos",
-                                         parent=hosts_frame)
+                    # Consultar la dirección completa desde la base de datos
+                    cursor.execute("""
+                        SELECT direccion 
+                        FROM dbs 
+                        WHERE db_name = ? 
+                        AND usuario_windows = ?
+                    """, (db_name, usuario_actual))
+
+                    resultado = cursor.fetchone()
+                    if resultado:
+                        direccion = resultado[0]
+                        messagebox.showinfo("Conectar", f"Conectando a: {direccion}", parent=hosts_frame)
+                        print(f'Aqui es host personal: {direccion}')
+                        from test_consulta_ordenada import registrar_ingreso
+                        registrar_ingreso(direccion, MASTER, usuario_actual, 3)
+                    else:
+                        messagebox.showerror("Error", "No se pudo encontrar la dirección de la base de datos",
+                                             parent=hosts_frame)
+
+                except sqlite3.Error as e:
+                    messagebox.showerror("Error de base de datos", f"Error al conectar: {str(e)}", parent=hosts_frame)
+                finally:
+                    # Cerrar la conexión cuando ya no se necesite
+                    if 'conn' in locals():
+                        conn.close()
 
         def cargar_hosts():
             """Cargar los hosts del usuario"""
