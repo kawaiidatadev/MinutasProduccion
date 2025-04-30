@@ -21,22 +21,6 @@ def registrar_acuerdo(parent_window, db_path):
 
     reg_window.title("Registrar Nuevo Acuerdo")
 
-    # # Configurar escalado de Tkinter
-    # reg_window.tk.call('tk', 'scaling', scale_factor * 1.5)
-    #
-    # # Tamaños base ajustados por escalado
-    # base_width = int(800 / scale_factor)
-    # base_height = int(825 / scale_factor)
-    # listbox_width = int(30 / scale_factor)
-    #
-    # reg_window.geometry(f"{base_width}x{base_height}")
-    # center_window(reg_window)  # Asegúrate que esta función también considere el escalado
-
-    # Centrar la ventana
-    #center_window(reg_window)
-    # Hacer la ventana modal (evitar interactuar con otras)
-    #reg_window.grab_set()
-
     # Maximizar la ventana según el sistema operativo
     if sys.platform == 'win32':
         reg_window.state('zoomed')  # Para Windows
