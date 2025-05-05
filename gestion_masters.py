@@ -219,39 +219,27 @@ def host(db_path):
             """Conectar al host seleccionado"""
             seleccion = hosts_tree.selection()
             if seleccion:
+
                 db_name = hosts_tree.item(seleccion[0])['values'][0]
-                print(f"db_name: {db_name} y usuario actual: {usuario_actual}")
 
-                # Crear una nueva conexión y cursor para esta operación
-                try:
-                    conn = sqlite3.connect(MASTER)  # MASTER debería ser la ruta a tu base de datos maestra
-                    cursor = conn.cursor()
+                # Consultar la dirección completa desde la base de datos
+                cursor.execute("""
+                    SELECT direccion 
+                    FROM dbs 
+                    WHERE db_name = ? 
+                    AND usuario_windows = ?
+                """, (db_name, usuario_actual))
 
-                    # Consultar la dirección completa desde la base de datos
-                    cursor.execute("""
-                        SELECT direccion 
-                        FROM dbs 
-                        WHERE db_name = ? 
-                        AND usuario_windows = ?
-                    """, (db_name, usuario_actual))
-
-                    resultado = cursor.fetchone()
-                    if resultado:
-                        direccion = resultado[0]
-                        messagebox.showinfo("Conectar", f"Conectando a: {direccion}", parent=hosts_frame)
-                        print(f'Aqui es host personal: {direccion}')
-                        from test_consulta_ordenada import registrar_ingreso
-                        registrar_ingreso(direccion, MASTER, usuario_actual, 3)
-                    else:
-                        messagebox.showerror("Error", "No se pudo encontrar la dirección de la base de datos",
-                                             parent=hosts_frame)
-
-                except sqlite3.Error as e:
-                    messagebox.showerror("Error de base de datos", f"Error al conectar: {str(e)}", parent=hosts_frame)
-                finally:
-                    # Cerrar la conexión cuando ya no se necesite
-                    if 'conn' in locals():
-                        conn.close()
+                resultado = cursor.fetchone()
+                if resultado:
+                    direccion = resultado[0]
+                    messagebox.showinfo("Conectar", f"Conectando a: {direccion}", parent=hosts_frame)
+                    print(f'Aqui es host personal: {direccion}')
+                    from test_consulta_ordenada import registrar_ingreso
+                    registrar_ingreso(direccion, MASTER, usuario_actual, 3)
+                else:
+                    messagebox.showerror("Error", "No se pudo encontrar la dirección de la base de datos",
+                                         parent=hosts_frame)
 
         def cargar_hosts():
             """Cargar los hosts del usuario"""
@@ -493,42 +481,6 @@ def host(db_path):
         # Cargar datos iniciales
         cargar_otros_hosts()
 
-        def solicitar_acceso():
-            """Crear solicitud de acceso"""
-            seleccion = otros_hosts_tree.selection()
-            if not seleccion:
-                return
-
-            db_id = seleccion[0]
-            db_name = otros_hosts_tree.item(seleccion[0], 'values')[0]
-
-            try:
-                user = getpass.getuser() if usuario_actual == 'Master' else usuario_actual
-
-                # Insertar nueva solicitud
-                cursor.execute("""
-                    INSERT INTO solicitudes_acceso 
-                    (db_id, usuario_solicitante, fecha_solicitud, estatus)
-                    VALUES (?, ?, ?, 'pendiente')
-                """, (db_id, user, datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-
-                conn.commit()
-                messagebox.showinfo("Éxito",
-                                    f"Solicitud enviada para: {db_name}",
-                                    parent=otros_hosts_frame)
-
-                # Actualizar la vista
-                cargar_otros_hosts()
-                btn_solicitar.config(state=tk.DISABLED)
-
-            except sqlite3.IntegrityError:
-                messagebox.showwarning("Advertencia",
-                                       "Ya existe una solicitud para esta base de datos",
-                                       parent=otros_hosts_frame)
-            except Exception as e:
-                messagebox.showerror("Error",
-                                     f"Error al enviar solicitud:\n{str(e)}",
-                                     parent=otros_hosts_frame)
 
         # Configurar eventos
         btn_solicitar.config(command=solicitar_acceso)
@@ -594,6 +546,8 @@ def host(db_path):
         cargar_hosts()
         cargar_hosts_compartidos()  # Nueva línea
         move_to_largest_monitor(host_window)
+        # Iniciar el bucle principal de la GUI
+        host_window.mainloop()  # ¡Añadir esta línea!
 
     except Exception as e:
         messagebox.showerror("Error", f"Ocurrió un error: {str(e)}")
@@ -636,5 +590,5 @@ def get_pending_requests_count(db_path):
         print(f"Error obteniendo solicitudes pendientes: {str(e)}")
         return 0
     finally:
-        if 'conn' in locals():
+        if conn:  # Cerrar la conexión si existe
             conn.close()

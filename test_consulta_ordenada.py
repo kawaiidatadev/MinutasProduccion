@@ -24,7 +24,7 @@ def registrar_ingreso(direccion_filtrada, path_master=MASTER, usuario_actual_win
             )
             conn.execute("PRAGMA foreign_keys = ON")
             cursor = conn.cursor()
-            print("✓ Conexión exitosa")
+            print(" Conexión exitosa")
 
             # Crear tabla ingresos si no existe
             cursor.execute("""
@@ -40,7 +40,7 @@ def registrar_ingreso(direccion_filtrada, path_master=MASTER, usuario_actual_win
                 FOREIGN KEY(db_id) REFERENCES dbs(id)
             )
             """)
-            print("✓ Estructura de base de datos verificada")
+            print("Estructura de base de datos verificada")
 
             # Buscar registro
             print(f"\nBuscando dirección: {direccion_filtrada}")
@@ -97,7 +97,7 @@ def registrar_ingreso(direccion_filtrada, path_master=MASTER, usuario_actual_win
 
             conn.commit()
 
-            print(f"✓ Acceso registrado a: {db_name}")
+            print(f"  Acceso registrado a: {db_name}")
             print(f"   - Dirección: {direccion}")
             print(f"   - Tipo de usuario: {'Administrador' if tabla_origen == 'dbs' else 'Invitado'}")
             print(f"   - Hora de acceso: {fecha_actual}")

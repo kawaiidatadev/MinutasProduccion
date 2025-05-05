@@ -175,6 +175,81 @@ def show_main_menu(db_path):
     # 4. Ajustar fuentes
     fonts = apply_scaling(root, scale_factor)
 
+    # Agregar lista de usuarios
+    usuarios_list = [
+        "Alejandra Reyes Bañuelos",
+        "Ana Carolina Arredondo Valenzuela",
+        "Blanca Estela Cruz González",
+        "Cesar Zuñiga Franco",
+        "Hector Daniel Nuñez Compean",
+        "Delia Quiroz Alonso",
+        "Erick Fabian Gutierrez Granados",
+        "Francisco Arturo Estrada Aguilar",
+        "Jorge Alberto Huizar Carrillo",
+        "Carlos Iban de Arcos Lozano",
+        "Karen Oralia Cortes Arellano",
+        "Enrique Villanueva Venegas",
+        "Eduardo Francisco Javier Morales Castro",
+        "Luz Elena Reynaga Hernandez",
+        "Luis Manuel Macias Patiño",
+        "Jorge Emmanuel Garcia Zuñiga",
+        "Armando Perez Andalon",
+        "Miriam Perez Cuevas",
+        "Juan Antonio Alvarin Hernandez",
+        "Oscar Saul Frutacio Muñoz",
+        "Raul Garcia Vargas",
+        "Samuel Amaton Alvarez",
+        "Yadira Fierro Dominguez",
+        "Yudileana Mariel Perez Perez",
+        "Yuliana Arias Briseño",
+        "General",
+        "Arredondo Alegret Rafael"
+    ]
+
+    # Función para verificar si ya existen usuarios
+    def check_existing_users():
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM usuarios WHERE nombre IN ({})".format(
+                ','.join(['?'] * len(usuarios_list))), usuarios_list)
+            count = cursor.fetchone()[0]
+            conn.close()
+            return count > 0
+        except Exception as e:
+            print(f"Error al verificar usuarios: {e}")
+            return True
+
+    # Función para insertar usuarios
+    def insert_users():
+        try:
+            from datetime import datetime
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+
+
+            # Obtener fecha actual y usuario de Windows
+            fecha_actual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            usuario_actual = os.getenv('USERNAME', 'SYSTEM')
+
+            # Insertar todos los usuarios
+            cursor.executemany("""
+                INSERT INTO usuarios 
+                (nombre, fecha_registro, usuario_registra, estatus)
+                VALUES (?, ?, ?, 'Activo')
+            """, [(nombre, fecha_actual, usuario_actual) for nombre in usuarios_list])
+
+            conn.commit()
+            conn.close()
+            insert_button.config(state=tk.DISABLED)
+            messagebox.showinfo("Éxito", "Usuarios insertados correctamente")
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Error", "Algunos usuarios ya existen en la base de datos")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al insertar usuarios: {e}")
+
+
+
     # Paleta de colores mejorada
     bg_color = "#f5f7fa"
     header_color = "#2c3e50"
@@ -550,6 +625,41 @@ def show_main_menu(db_path):
         **button_style
     )
     btn_interactivos.pack(side='left', expand=True, padx=(0, 10))
+
+    # Marco para el botón de inserción (antes del metrics_frame)
+    insert_frame = tk.Frame(main_frame, bg=bg_color)
+    insert_frame.pack(fill='x', pady=(0, 10))
+
+    # Definir colores para el botón "Cargar Usuarios Iniciales"
+    insert_button_color = '#FF9800'  # Naranja
+    insert_button_hover = '#e68900'  # Naranja oscuro
+
+    # Crear botón mejorado de inserción
+    insert_button = tk.Button(
+        insert_frame,
+        text="CARGAR USUARIOS INICIALES",
+        command=insert_users,
+        bg=insert_button_color,
+        fg='white',
+        activebackground=insert_button_hover,
+        relief='raised',
+        font=('Helvetica', 10, 'bold'),
+        width=25,
+        height=2,
+        cursor='hand2',
+        bd=3
+    )
+
+    # Deshabilitar botón si ya existen registros
+    if check_existing_users():
+        insert_button.config(state=tk.DISABLED, bg='#BDBDBD', cursor='X_cursor')
+
+    # Posicionar botón en la interfaz
+    insert_button.pack(pady=10, padx=10)
+
+    # Efecto hover para el botón
+    insert_button.bind("<Enter>", lambda e: insert_button.config(bg=insert_button_hover, relief='sunken'))
+    insert_button.bind("<Leave>", lambda e: insert_button.config(bg=insert_button_color, relief='raised'))
 
     # Nuevo botón para crear minuta
     btn_minuta = tk.Button(

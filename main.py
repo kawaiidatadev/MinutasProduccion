@@ -1,19 +1,18 @@
 from common import *
 from sql.db import db_create
 from Menu.Menu import show_main_menu
-from monitor_exe import ejecutar_monitor
 import locale
-
+from Ejecutable_Inicializador import ejecutable_run
 
 
 def main():
     verificar_imports()
     # Configuración regional
     try:
-        ejecutar_monitor()
-        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
-    except:
-        locale.setlocale(locale.LC_ALL, '')
+        ejecutable_run()
+    except Exception as e:
+        print(f"Error al ejecutar inicializador: {str(e)}")
+
 
     # Crear/verificar la base de datos
     db_path = db_create()
